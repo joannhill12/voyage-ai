@@ -1,0 +1,702 @@
+npm start
+
+ npm start
+ pwd 
+
+
+ import { useState, useRef } from "react";
+
+const STYLE = `
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #0f0e0d;
+    --cream: #f5f0e8;
+    --sand: #e8dfc8;
+    --gold: #c9a84c;
+    --gold-light: #e8cc7a;
+    --warm-gray: #8a8070;
+    --white: #fdfaf5;
+  }
+
+  body { background: var(--cream); font-family: 'DM Sans', sans-serif; color: var(--ink); }
+
+  .app {
+    min-height: 100vh;
+    background: var(--cream);
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(201,168,76,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(201,168,76,0.04) 0%, transparent 50%);
+  }
+
+  .nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.5rem 3rem;
+    border-bottom: 1px solid rgba(201,168,76,0.2);
+    background: rgba(245,240,232,0.9);
+    backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 100;
+    flex-wrap: wrap; gap: 0.75rem;
+  }
+  .nav-logo { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 600; letter-spacing: 0.05em; color: var(--ink); }
+  .nav-logo span { color: var(--gold); }
+  .nav-right { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .nav-tab { padding: 0.5rem 1.25rem; border-radius: 2rem; border: none; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; font-weight: 500; background: transparent; color: var(--warm-gray); transition: all 0.2s; }
+  .nav-tab.active { background: var(--ink); color: var(--cream); }
+  .nav-tab:hover:not(.active) { background: var(--sand); color: var(--ink); }
+  .nav-plan-badge { font-size: 0.7rem; padding: 0.28rem 0.75rem; border-radius: 2rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
+  .nav-plan-badge.basic { background: var(--sand); color: var(--warm-gray); }
+  .nav-plan-badge.premium { background: linear-gradient(135deg, var(--gold), var(--gold-light)); color: var(--ink); }
+
+  .hero { text-align: center; padding: 5rem 2rem 3rem; max-width: 700px; margin: 0 auto; }
+  .hero-eyebrow { font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); font-weight: 500; margin-bottom: 1.5rem; }
+  .hero h1 { font-family: 'Cormorant Garamond', serif; font-size: clamp(2.8rem, 6vw, 4.5rem); font-weight: 300; line-height: 1.1; color: var(--ink); margin-bottom: 1.5rem; }
+  .hero h1 em { font-style: italic; color: var(--gold); }
+  .hero p { font-size: 1.05rem; color: var(--warm-gray); line-height: 1.7; max-width: 480px; margin: 0 auto 2.5rem; }
+
+  .card { background: var(--white); border: 1px solid rgba(201,168,76,0.2); border-radius: 1.5rem; padding: 2.5rem; box-shadow: 0 4px 40px rgba(15,14,13,0.06); max-width: 680px; margin: 0 auto 2rem; }
+  .card-title { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; margin-bottom: 0.4rem; }
+  .card-subtitle { font-size: 0.9rem; color: var(--warm-gray); margin-bottom: 2rem; }
+
+  .field { margin-bottom: 1.75rem; }
+  .field label { display: block; font-size: 0.8rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--warm-gray); margin-bottom: 0.6rem; }
+  .field input, .field select { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--sand); border-radius: 0.75rem; background: var(--cream); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; color: var(--ink); outline: none; transition: border-color 0.2s; }
+  .field input:focus, .field select:focus { border-color: var(--gold); }
+
+  .chip-group { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .chip { padding: 0.5rem 1rem; border-radius: 2rem; border: 1.5px solid var(--sand); background: transparent; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; font-family: 'DM Sans', sans-serif; color: var(--ink); }
+  .chip.selected { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+  .chip:hover:not(.selected) { border-color: var(--gold); color: var(--gold); }
+
+  .slider-row { display: flex; align-items: center; gap: 1rem; }
+  .slider-label { font-size: 0.8rem; color: var(--warm-gray); min-width: 80px; }
+  .slider-label.right { text-align: right; }
+  input[type=range] { flex: 1; accent-color: var(--gold); height: 4px; }
+
+  .btn-primary { width: 100%; padding: 1rem; border-radius: 0.75rem; border: none; background: var(--ink); color: var(--cream); font-size: 1rem; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; transition: all 0.2s; letter-spacing: 0.02em; }
+  .btn-primary:hover { background: #2a2520; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(15,14,13,0.15); }
+  .btn-primary:disabled { background: var(--sand); color: var(--warm-gray); cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-gold { padding: 0.65rem 1.5rem; border-radius: 2rem; border: 1.5px solid var(--gold); background: transparent; color: var(--gold); font-size: 0.85rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.2s; }
+  .btn-gold:hover { background: var(--gold); color: var(--white); }
+  .btn-ghost { padding: 0.65rem 1.5rem; border-radius: 2rem; border: 1.5px solid var(--sand); background: transparent; color: var(--warm-gray); font-size: 0.85rem; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.2s; }
+  .btn-ghost:hover { border-color: var(--warm-gray); color: var(--ink); }
+
+  .steps { display: flex; align-items: center; gap: 0.5rem; justify-content: center; margin-bottom: 2.5rem; }
+  .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sand); transition: all 0.3s; }
+  .step-dot.active { background: var(--gold); width: 24px; border-radius: 4px; }
+  .step-dot.done { background: var(--ink); }
+
+  .streaming-card { background: var(--white); border: 1px solid rgba(201,168,76,0.2); border-radius: 1.5rem; padding: 2.5rem; max-width: 680px; margin: 0 auto; box-shadow: 0 4px 40px rgba(15,14,13,0.06); }
+  .stream-text { font-size: 0.95rem; line-height: 1.8; color: var(--ink); white-space: pre-wrap; min-height: 200px; }
+  .cursor { display: inline-block; width: 2px; height: 1em; background: var(--gold); margin-left: 2px; animation: blink 0.8s steps(1) infinite; vertical-align: middle; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .loading-bar { height: 2px; background: var(--sand); border-radius: 1px; overflow: hidden; margin-bottom: 1.5rem; }
+  .loading-bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-light)); border-radius: 1px; animation: load 2.5s ease-in-out infinite; }
+  @keyframes load { 0%{width:0%} 70%{width:85%} 100%{width:95%} }
+
+  .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; max-width: 960px; margin: 0 auto 3rem; padding: 0 1.5rem; }
+  .trip-card { background: var(--white); border: 1px solid rgba(201,168,76,0.15); border-radius: 1.25rem; overflow: hidden; cursor: pointer; transition: all 0.25s; box-shadow: 0 2px 16px rgba(15,14,13,0.04); }
+  .trip-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(15,14,13,0.1); border-color: var(--gold); }
+  .trip-card-img { height: 130px; display: flex; align-items: center; justify-content: center; font-size: 3.2rem; background: var(--sand); position: relative; }
+  .trip-card-body { padding: 1.25rem; }
+  .trip-card-dest { font-size: 0.7rem; color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; margin-bottom: 0.3rem; }
+  .trip-card-title { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; font-weight: 600; margin-bottom: 0.4rem; }
+  .trip-card-meta { font-size: 0.8rem; color: var(--warm-gray); }
+  .trip-card-tags { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.75rem; }
+  .tag { font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 1rem; background: var(--cream); color: var(--warm-gray); border: 1px solid var(--sand); }
+  .premium-tag { background: linear-gradient(135deg, var(--gold), var(--gold-light)); color: var(--ink); border: none; font-weight: 700; }
+  .lock-overlay { position: absolute; inset: 0; background: rgba(15,14,13,0.35); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+
+  .gen-card { background: var(--white); border: 1px solid rgba(201,168,76,0.2); border-radius: 1.5rem; padding: 2rem 2.5rem; max-width: 680px; margin: 0 auto 2rem; box-shadow: 0 4px 40px rgba(15,14,13,0.06); }
+  .gen-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .gen-field { flex: 1; min-width: 180px; }
+  .gen-field label { display: block; font-size: 0.75rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--warm-gray); margin-bottom: 0.5rem; }
+  .gen-field input, .gen-field select { width: 100%; padding: 0.65rem 0.9rem; border: 1px solid var(--sand); border-radius: 0.65rem; background: var(--cream); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--ink); outline: none; transition: border-color 0.2s; }
+  .gen-field input:focus, .gen-field select:focus { border-color: var(--gold); }
+
+  .usage-bar-track { height: 6px; background: var(--sand); border-radius: 3px; margin: 0.5rem 0; }
+  .usage-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+  .usage-ok { background: var(--gold); }
+  .usage-full { background: #c0392b; }
+
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(15,14,13,0.6); backdrop-filter: blur(4px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 1.5rem; animation: fadeIn 0.2s ease; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .modal { background: var(--white); border-radius: 2rem; padding: 2.5rem; max-width: 520px; width: 100%; box-shadow: 0 24px 80px rgba(15,14,13,0.2); animation: slideUp 0.25s ease; }
+  @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .modal-close { float: right; background: none; border: none; cursor: pointer; color: var(--warm-gray); font-size: 1.3rem; margin-top: -0.5rem; line-height: 1; }
+
+  /* PRICING */
+  .pricing-wrap { max-width: 900px; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
+  .pricing-header { text-align: center; margin-bottom: 3rem; }
+  .pricing-header h2 { font-family: 'Cormorant Garamond', serif; font-size: clamp(2rem,4vw,3rem); font-weight: 300; margin-bottom: 0.75rem; }
+  .pricing-header h2 em { font-style: italic; color: var(--gold); }
+  .pricing-header p { color: var(--warm-gray); font-size: 1rem; }
+  .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2.5rem; }
+  @media(max-width:580px){ .pricing-grid{grid-template-columns:1fr} }
+  .pricing-card { background: var(--white); border: 1.5px solid rgba(201,168,76,0.2); border-radius: 1.75rem; padding: 2.25rem; position: relative; transition: box-shadow 0.2s; }
+  .pricing-card:hover { box-shadow: 0 12px 48px rgba(15,14,13,0.08); }
+  .pricing-card.featured { border-color: var(--gold); background: var(--ink); color: var(--cream); }
+  .popular-badge { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: linear-gradient(135deg, var(--gold), var(--gold-light)); color: var(--ink); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.28rem 1rem; border-radius: 2rem; white-space: nowrap; }
+  .pricing-tier { font-size: 0.75rem; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 600; color: var(--gold); margin-bottom: 1rem; }
+  .pricing-card.featured .pricing-tier { color: var(--gold-light); }
+  .pricing-price { font-family: 'Cormorant Garamond', serif; font-size: 3.5rem; font-weight: 600; line-height: 1; margin-bottom: 0.25rem; }
+  .pricing-price sup { font-size: 1.5rem; vertical-align: super; }
+  .pricing-price-sub { font-size: 0.85rem; color: var(--warm-gray); margin-bottom: 1.75rem; }
+  .pricing-card.featured .pricing-price-sub { color: rgba(245,240,232,0.45); }
+  .p-divider { height: 1px; background: rgba(201,168,76,0.15); margin: 1.5rem 0; }
+  .pricing-card.featured .p-divider { background: rgba(245,240,232,0.1); }
+  .pricing-features { list-style: none; margin-bottom: 2rem; }
+  .pricing-feature-item { display: flex; align-items: flex-start; gap: 0.6rem; font-size: 0.88rem; margin-bottom: 0.75rem; line-height: 1.4; }
+  .feat-icon { color: var(--gold); flex-shrink: 0; margin-top: 0.05rem; }
+  .pricing-card.featured .feat-icon { color: var(--gold-light); }
+  .feat-muted { color: var(--warm-gray); }
+  .btn-p { width: 100%; padding: 0.9rem; border-radius: 0.75rem; border: none; font-size: 0.95rem; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+  .btn-p.dark { background: var(--ink); color: var(--cream); }
+  .btn-p.dark:hover { background: #2a2520; transform: translateY(-1px); }
+  .btn-p.gold-grad { background: linear-gradient(135deg, var(--gold), var(--gold-light)); color: var(--ink); }
+  .btn-p.gold-grad:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(201,168,76,0.35); }
+  .btn-p.outline { background: transparent; border: 1.5px solid rgba(245,240,232,0.3); color: var(--cream); }
+  .btn-p:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+  .current-plan-note { text-align: center; font-size: 0.78rem; color: var(--warm-gray); margin-top: 0.65rem; }
+  .pricing-card.featured .current-plan-note { color: rgba(245,240,232,0.4); }
+
+  .compare-wrap { overflow-x: auto; }
+  .compare-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .compare-table th { text-align: left; padding: 0.75rem 1rem; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--warm-gray); border-bottom: 1px solid var(--sand); }
+  .compare-table th:not(:first-child) { text-align: center; }
+  .compare-table td { padding: 0.85rem 1rem; border-bottom: 1px solid rgba(232,223,200,0.5); color: var(--ink); }
+  .compare-table td:not(:first-child) { text-align: center; }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .c-check { color: var(--gold); }
+  .c-cross { color: var(--sand); }
+  .col-prem { background: rgba(201,168,76,0.05); }
+
+  .guarantee { text-align: center; padding: 2rem; background: var(--white); border: 1px solid var(--sand); border-radius: 1.25rem; margin-top: 2rem; }
+  .guarantee h4 { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; margin-bottom: 0.4rem; }
+  .guarantee p { font-size: 0.85rem; color: var(--warm-gray); max-width: 380px; margin: 0 auto; line-height: 1.6; }
+
+  @media(max-width:600px){
+    .nav { padding: 1rem 1.25rem; }
+    .card, .streaming-card, .gen-card { padding: 1.5rem; border-radius: 1.25rem; }
+    .hero { padding: 3rem 1.25rem 2rem; }
+    .modal { padding: 2rem 1.5rem; border-radius: 1.5rem; }
+  }
+`;
+
+const SAMPLE_TRIPS = [
+  { emoji:"🇵🇹", dest:"Lisbon, Portugal",    title:"Golden Hour in Lisbon",       days:"5 days", tags:["Food","Walkable","Culture"],       meta:"April–June",  premium:false },
+  { emoji:"🇯🇵", dest:"Kyoto, Japan",         title:"Temples & Kaiseki",           days:"7 days", tags:["Culture","Cuisine","Hidden Gems"], meta:"March–April", premium:false },
+  { emoji:"🇲🇽", dest:"Oaxaca, Mexico",       title:"Mezcal & Markets",            days:"4 days", tags:["Food","Art","Local"],              meta:"Oct–Nov",     premium:false },
+  { emoji:"🇮🇹", dest:"Bologna, Italy",       title:"Italy's Best Kept Secret",    days:"4 days", tags:["Food","Architecture","Walkable"],  meta:"May–June",    premium:true  },
+  { emoji:"🇹🇳", dest:"Marrakech, Morocco",   title:"Medina & Mountains",          days:"5 days", tags:["Culture","Adventure","Food"],      meta:"March–May",   premium:true  },
+  { emoji:"🇺🇾", dest:"Montevideo, Uruguay",  title:"The Anti-Buenos Aires",       days:"4 days", tags:["Food","Local","Walkable"],         meta:"Dec–Feb",     premium:true  },
+  { emoji:"🇬🇷", dest:"Athens, Greece",       title:"Beyond the Parthenon",        days:"5 days", tags:["Culture","Food","History"],        meta:"April–May",   premium:true  },
+  { emoji:"🇹🇼", dest:"Taipei, Taiwan",       title:"Night Markets & Mountains",   days:"6 days", tags:["Food","Nature","City"],            meta:"Oct–Dec",     premium:true  },
+];
+
+const BASIC_LIMIT = 3;
+
+export default function App() {
+  const [tab, setTab]               = useState("onboard");
+  const [step, setStep]             = useState(0);
+  const [profile, setProfile]       = useState({ name:"", airport:"", budget:"2000-5000", styles:[], tripLength:"4-6", pace:50, crowds:30 });
+  const [plan, setPlan]             = useState("basic");
+  const [usageCount, setUsageCount] = useState(0);
+  const [generating, setGenerating] = useState(false);
+  const [streamText, setStreamText] = useState("");
+  const [done, setDone]             = useState(false);
+  const [destination, setDestination]   = useState("");
+  const [tripDays, setTripDays]         = useState("5");
+  const [travelStyle, setTravelStyle]   = useState("food and culture");
+  const [onboarded, setOnboarded]       = useState(false);
+  const [showPaywall, setShowPaywall]   = useState(false);
+  const [paywallReason, setPaywallReason] = useState("limit");
+  const streamRef = useRef(null);
+
+  const styleOptions = ["Food-Focused","Cultural","Adventure","Walkable Cities","Hidden Gems","Romantic","Art & Design","Nature"];
+  const isPremium = plan === "premium";
+  const atLimit   = !isPremium && usageCount >= BASIC_LIMIT;
+
+  function toggleStyle(s) {
+    setProfile(p => ({ ...p, styles: p.styles.includes(s) ? p.styles.filter(x=>x!==s) : [...p.styles, s] }));
+  }
+
+  function handleTripClick(trip) {
+    if (trip.premium && !isPremium) { setPaywallReason("destination"); setShowPaywall(true); return; }
+    setDestination(trip.dest); setTab("generate");
+  }
+
+  function handleGenerateClick() {
+    if (atLimit) { setPaywallReason("limit"); setShowPaywall(true); return; }
+    generateItinerary();
+  }
+
+  function upgradeToPremium() { setPlan("premium"); setShowPaywall(false); }
+
+  async function generateItinerary() {
+    if (!destination) return;
+    setGenerating(true); setStreamText(""); setDone(false);
+    setUsageCount(c => c + 1);
+
+    const prompt = `You are a luxury travel concierge for affluent couples who value food, walkability, and curated experiences.
+
+Create a detailed ${tripDays}-day itinerary for ${destination} focused on ${travelStyle}.
+
+Format it exactly like this:
+
+**${destination}: [Evocative Trip Title]**
+*[One compelling sentence that sells this trip]*
+
+**Trip Overview**
+[2-3 sentences: why this destination, why now, what makes this itinerary special]
+
+**Day 1 — [Day Theme]**
+• Morning (9:00 AM): [Activity] — [1-2 sentence description with insider tip]
+• Lunch (12:30 PM): [Restaurant name] — [what to order, why it's special]
+• Afternoon (2:30 PM): [Activity] — [description]
+• Evening (7:00 PM): [Dinner restaurant] — [description, reservation notes]
+
+[Continue for all ${tripDays} days in same format]
+
+**Insider Tips**
+• [3 specific, non-obvious tips]
+
+**Logistics**
+• Best time to book flights: [advice]
+• Neighborhood to stay: [specific area and why]
+• Budget estimate: [per-person for ${tripDays} days excluding flights]
+
+Write with the warmth of someone who has lived there for years. Be specific — real restaurants, real neighborhoods, real experiences. No generic advice.`;
+
+    try {
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1800, stream:true, messages:[{role:"user",content:prompt}] })
+      });
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done: sd, value } = await reader.read();
+        if (sd) break;
+        buffer += decoder.decode(value, { stream:true });
+        const lines = buffer.split("\n"); buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6); if (data==="[DONE]") continue;
+          try {
+            const json = JSON.parse(data);
+            if (json.type==="content_block_delta" && json.delta?.text) {
+              setStreamText(prev => prev + json.delta.text);
+              if (streamRef.current) streamRef.current.scrollTop = streamRef.current.scrollHeight;
+            }
+          } catch {}
+        }
+      }
+    } catch { setStreamText("Unable to reach the AI. Please ensure your API key is configured."); }
+    setGenerating(false); setDone(true);
+  }
+
+  // ── PAYWALL MODAL ──────────────────────────────────────────────────────────
+  const PaywallModal = () => (
+    <div className="modal-backdrop" onClick={e => { if(e.target===e.currentTarget) setShowPaywall(false); }}>
+      <div className="modal">
+        <button className="modal-close" onClick={() => setShowPaywall(false)}>✕</button>
+        <div style={{textAlign:"center",marginBottom:"1.75rem"}}>
+          <div style={{fontSize:"2rem",marginBottom:"0.75rem"}}>✦</div>
+          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"1.75rem",fontWeight:600,marginBottom:"0.5rem",lineHeight:1.2}}>
+            {paywallReason==="limit" ? "You've used your 3 itineraries this month" : "Premium destination"}
+          </div>
+          <p style={{color:"var(--warm-gray)",fontSize:"0.88rem",lineHeight:1.65,maxWidth:380,margin:"0 auto"}}>
+            {paywallReason==="limit"
+              ? "Basic members get 3 AI itineraries per month. Upgrade to Premium for unlimited trips, exclusive destinations, and PDF exports."
+              : "This destination is part of our Premium collection — off-the-beaten-path gems for our most adventurous members."}
+          </p>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"1rem",marginBottom:"1.5rem"}}>
+          <div style={{background:"var(--cream)",borderRadius:"1rem",padding:"1.25rem",border:"1px solid var(--sand)"}}>
+            <div style={{fontSize:"0.68rem",letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--warm-gray)",marginBottom:"0.4rem"}}>Basic</div>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"2rem",fontWeight:600}}>$29<span style={{fontSize:"0.95rem",color:"var(--warm-gray)"}}/mo</span></div>
+            <ul style={{listStyle:"none",marginTop:"0.65rem",fontSize:"0.82rem",color:"var(--warm-gray)",lineHeight:1.8}}>
+              <li>✓ 3 itineraries/month</li>
+              <li>✓ Core destinations</li>
+              <li style={{color:"var(--sand)"}}>✗ Premium destinations</li>
+              <li style={{color:"var(--sand)"}}>✗ PDF export</li>
+            </ul>
+            <div style={{marginTop:"0.75rem",fontSize:"0.78rem",color:"var(--warm-gray)",fontStyle:"italic",textAlign:"center"}}>Your current plan</div>
+          </div>
+          <div style={{background:"var(--ink)",color:"var(--cream)",borderRadius:"1rem",padding:"1.25rem",position:"relative"}}>
+            <div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",background:"linear-gradient(135deg,var(--gold),var(--gold-light))",color:"var(--ink)",fontSize:"0.65rem",fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",padding:"0.25rem 0.8rem",borderRadius:"2rem",whiteSpace:"nowrap"}}>Most Popular</div>
+            <div style={{fontSize:"0.68rem",letterSpacing:"0.12em",textTransform:"uppercase",color:"var(--gold-light)",marginBottom:"0.4rem"}}>Premium</div>
+            <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"2rem",fontWeight:600}}>$79<span style={{fontSize:"0.95rem",color:"rgba(245,240,232,0.45)"}}/mo</span></div>
+            <ul style={{listStyle:"none",marginTop:"0.65rem",fontSize:"0.82rem",color:"rgba(245,240,232,0.8)",lineHeight:1.8}}>
+              <li>✓ Unlimited itineraries</li>
+              <li>✓ All destinations</li>
+              <li>✓ Premium destinations</li>
+              <li>✓ PDF export</li>
+            </ul>
+          </div>
+        </div>
+
+        <button className="btn-p gold-grad" style={{width:"100%",padding:"1rem",marginBottom:"0.75rem"}} onClick={upgradeToPremium}>
+          ✦ Upgrade to Premium — $79/month
+        </button>
+        <button className="btn-ghost" style={{width:"100%"}} onClick={() => setShowPaywall(false)}>Stay on Basic</button>
+        <p style={{textAlign:"center",fontSize:"0.75rem",color:"var(--warm-gray)",marginTop:"0.75rem"}}>Cancel anytime · 7-day money-back guarantee</p>
+      </div>
+    </div>
+  );
+
+  // ── PRICING PAGE ───────────────────────────────────────────────────────────
+  const PricingPage = () => (
+    <div className="pricing-wrap">
+      <div className="pricing-header">
+        <div className="hero-eyebrow">✦ Simple, honest pricing</div>
+        <h2>Choose your <em>travel style</em></h2>
+        <p>Start with Basic or go unlimited with Premium. Cancel anytime.</p>
+      </div>
+
+      <div className="pricing-grid">
+        {/* BASIC */}
+        <div className="pricing-card">
+          <div className="pricing-tier">Basic</div>
+          <div className="pricing-price"><sup>$</sup>29</div>
+          <div className="pricing-price-sub">per month · billed monthly</div>
+          <div className="p-divider"/>
+          <ul className="pricing-features">
+            {[
+              ["3 AI itineraries per month",false],
+              ["Core destination library (25+ cities)",false],
+              ["Day-by-day plan with dining & activities",false],
+              ["Insider tips & logistics",false],
+              ["Email delivery of curated trips",false],
+              ["Premium destinations",true],
+              ["Unlimited itinerary generation",true],
+              ["PDF download & export",true],
+              ["Flight deal alerts",true],
+            ].map(([feat,muted],i)=>(
+              <li key={i} className="pricing-feature-item">
+                <span className="feat-icon">{muted?"○":"✦"}</span>
+                <span className={muted?"feat-muted":""}>{feat}</span>
+              </li>
+            ))}
+          </ul>
+          {isPremium
+            ? <button className="btn-p dark" onClick={()=>setPlan("basic")}>Switch to Basic</button>
+            : <><button className="btn-p dark" disabled>Current Plan</button><div className="current-plan-note">You're on Basic</div></>
+          }
+        </div>
+
+        {/* PREMIUM */}
+        <div className="pricing-card featured">
+          <div className="popular-badge">Most Popular</div>
+          <div className="pricing-tier">Premium</div>
+          <div className="pricing-price"><sup>$</sup>79</div>
+          <div className="pricing-price-sub">per month · billed monthly</div>
+          <div className="p-divider"/>
+          <ul className="pricing-features">
+            {[
+              "Unlimited AI itineraries",
+              "Full destination library (50+ cities)",
+              "Premium & off-the-beaten-path destinations",
+              "Day-by-day plan with dining & activities",
+              "Insider tips & logistics",
+              "Weekly curated trip drops via email",
+              "PDF download & export",
+              "Flight deal alerts",
+              "Priority access to new destinations",
+            ].map((feat,i)=>(
+              <li key={i} className="pricing-feature-item">
+                <span className="feat-icon">✦</span>
+                <span>{feat}</span>
+              </li>
+            ))}
+          </ul>
+          {isPremium
+            ? <><button className="btn-p outline" disabled>Current Plan</button><div className="current-plan-note">You're on Premium ✦</div></>
+            : <button className="btn-p gold-grad" onClick={upgradeToPremium}>Upgrade to Premium →</button>
+          }
+        </div>
+      </div>
+
+      {/* COMPARE TABLE */}
+      <div className="card">
+        <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"1.3rem",fontWeight:600,marginBottom:"0.25rem"}}>Full comparison</div>
+        <div style={{fontSize:"0.85rem",color:"var(--warm-gray)",marginBottom:"1.25rem"}}>Every feature, side by side</div>
+        <div className="compare-wrap">
+          <table className="compare-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Basic · $29</th>
+                <th className="col-prem">Premium · $79</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["Monthly itineraries","3","Unlimited"],
+                ["Core destinations (25+)","✦","✦"],
+                ["Premium destinations (50+)","✕","✦"],
+                ["Day-by-day planning","✦","✦"],
+                ["Dining recommendations","✦","✦"],
+                ["Insider tips & logistics","✦","✦"],
+                ["PDF export","✕","✦"],
+                ["Weekly email trip drops","✕","✦"],
+                ["Flight deal alerts","✕","✦"],
+                ["Priority new destinations","✕","✦"],
+                ["Cancel anytime","✦","✦"],
+              ].map(([feat,basic,prem])=>(
+                <tr key={feat}>
+                  <td>{feat}</td>
+                  <td><span className={basic==="✦"?"c-check":basic==="✕"?"c-cross":""}>{basic}</span></td>
+                  <td className="col-prem"><span className={prem==="✦"?"c-check":prem==="✕"?"c-cross":""}>{prem}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="guarantee">
+        <h4>7-day money-back guarantee</h4>
+        <p>Try Premium risk-free. If it's not right for you in the first 7 days, we'll refund every penny — no questions asked.</p>
+      </div>
+    </div>
+  );
+
+  // ── ONBOARDING ─────────────────────────────────────────────────────────────
+  const onboardSteps = [
+    <div key={0}>
+      <div className="card-title">Welcome. Let's set up your profile.</div>
+      <div className="card-subtitle">Takes 2 minutes. We use this to tailor every trip we send you.</div>
+      <div className="field">
+        <label>Your first name</label>
+        <input placeholder="e.g. Sarah" value={profile.name} onChange={e=>setProfile(p=>({...p,name:e.target.value}))} />
+      </div>
+      <div className="field">
+        <label>Home airport (IATA code)</label>
+        <input placeholder="e.g. TPA, JFK, LAX, ORD" value={profile.airport} onChange={e=>setProfile(p=>({...p,airport:e.target.value.toUpperCase()}))} />
+      </div>
+      <button className="btn-primary" onClick={()=>setStep(1)} disabled={!profile.name||!profile.airport}>Continue →</button>
+    </div>,
+
+    <div key={1}>
+      <div className="card-title">Travel preferences</div>
+      <div className="card-subtitle">Help us calibrate the right trips for you.</div>
+      <div className="field">
+        <label>Per-trip budget (per person, excl. flights)</label>
+        <select value={profile.budget} onChange={e=>setProfile(p=>({...p,budget:e.target.value}))}>
+          <option value="1000-2000">$1,000 – $2,000</option>
+          <option value="2000-5000">$2,000 – $5,000</option>
+          <option value="5000-10000">$5,000 – $10,000</option>
+          <option value="10000+">$10,000+</option>
+        </select>
+      </div>
+      <div className="field">
+        <label>Preferred trip length</label>
+        <select value={profile.tripLength} onChange={e=>setProfile(p=>({...p,tripLength:e.target.value}))}>
+          <option value="3-4">Long weekend (3–4 days)</option>
+          <option value="4-6">Sweet spot (4–6 days)</option>
+          <option value="7-10">Full week (7–10 days)</option>
+          <option value="10+">Extended (10+ days)</option>
+        </select>
+      </div>
+      <button className="btn-primary" onClick={()=>setStep(2)}>Continue →</button>
+    </div>,
+
+    <div key={2}>
+      <div className="card-title">What do you love about travel?</div>
+      <div className="card-subtitle">Select everything that resonates.</div>
+      <div className="field">
+        <div className="chip-group">
+          {styleOptions.map(s=>(
+            <button key={s} className={`chip ${profile.styles.includes(s)?"selected":""}`} onClick={()=>toggleStyle(s)}>{s}</button>
+          ))}
+        </div>
+      </div>
+      <button className="btn-primary" onClick={()=>setStep(3)} disabled={profile.styles.length===0}>Continue →</button>
+    </div>,
+
+    <div key={3}>
+      <div className="card-title">Fine-tune your vibe</div>
+      <div className="card-subtitle">Slide to tell us your travel personality.</div>
+      <div className="field">
+        <label>Travel pace</label>
+        <div className="slider-row">
+          <span className="slider-label">Relaxed</span>
+          <input type="range" min={0} max={100} value={profile.pace} onChange={e=>setProfile(p=>({...p,pace:+e.target.value}))} />
+          <span className="slider-label right">Packed</span>
+        </div>
+      </div>
+      <div className="field">
+        <label>Crowd tolerance</label>
+        <div className="slider-row">
+          <span className="slider-label">Off beaten path</span>
+          <input type="range" min={0} max={100} value={profile.crowds} onChange={e=>setProfile(p=>({...p,crowds:+e.target.value}))} />
+          <span className="slider-label right">Iconic spots</span>
+        </div>
+      </div>
+      <button className="btn-primary" onClick={()=>{setOnboarded(true);setTab("dashboard");}}>✦ Launch my travel profile</button>
+    </div>,
+  ];
+
+  return (
+    <>
+      <style>{STYLE}</style>
+      <div className="app">
+        {showPaywall && <PaywallModal />}
+
+        <nav className="nav">
+          <div className="nav-logo">Voyage<span>AI</span></div>
+          <div className="nav-right">
+            {!onboarded ? (
+              <button className="nav-tab active">Setup</button>
+            ) : (
+              <>
+                <button className={`nav-tab ${tab==="dashboard"?"active":""}`} onClick={()=>setTab("dashboard")}>My Trips</button>
+                <button className={`nav-tab ${tab==="generate"?"active":""}`} onClick={()=>setTab("generate")}>Generate</button>
+                <button className={`nav-tab ${tab==="pricing"?"active":""}`} onClick={()=>setTab("pricing")}>Pricing</button>
+                <span className={`nav-plan-badge ${isPremium?"premium":"basic"}`}>{isPremium?"✦ Premium":"Basic"}</span>
+              </>
+            )}
+          </div>
+        </nav>
+
+        {/* ONBOARDING */}
+        {!onboarded && (
+          <div>
+            <div className="hero">
+              <div className="hero-eyebrow">✦ Your AI Travel Concierge</div>
+              <h1>Travel more.<br /><em>Plan less.</em></h1>
+              <p>VoyageAI automatically delivers curated, ready-to-book itineraries tailored to you — no research required.</p>
+            </div>
+            <div className="steps">
+              {[0,1,2,3].map(i=>(
+                <div key={i} className={`step-dot ${i===step?"active":i<step?"done":""}`} />
+              ))}
+            </div>
+            <div className="card">{onboardSteps[step]}</div>
+          </div>
+        )}
+
+        {/* DASHBOARD */}
+        {onboarded && tab==="dashboard" && (
+          <div>
+            <div className="hero" style={{paddingBottom:"1.5rem"}}>
+              <div className="hero-eyebrow">✦ Welcome back{profile.name?`, ${profile.name}`:""}</div>
+              <h1 style={{fontSize:"clamp(2rem,4vw,3rem)"}}>Your curated<br /><em>trip collection</em></h1>
+              <p>Click any destination to generate a full AI itinerary. Premium destinations unlock with the ✦ plan.</p>
+            </div>
+
+            {!isPremium && (
+              <div style={{maxWidth:680,margin:"0 auto 2rem",padding:"0 1.5rem"}}>
+                <div style={{background:"var(--white)",border:"1px solid var(--sand)",borderRadius:"1rem",padding:"1.25rem 1.5rem"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"0.5rem"}}>
+                    <span style={{fontSize:"0.8rem",fontWeight:500}}>Monthly itineraries used</span>
+                    <span style={{fontSize:"0.8rem",color:atLimit?"#c0392b":"var(--warm-gray)"}}>{usageCount} / {BASIC_LIMIT}</span>
+                  </div>
+                  <div className="usage-bar-track">
+                    <div className={`usage-bar-fill ${atLimit?"usage-full":"usage-ok"}`} style={{width:`${Math.min((usageCount/BASIC_LIMIT)*100,100)}%`}} />
+                  </div>
+                  {atLimit
+                    ? <p style={{fontSize:"0.8rem",color:"#c0392b",marginTop:"0.5rem"}}>Limit reached — <button style={{background:"none",border:"none",color:"var(--gold)",cursor:"pointer",fontSize:"0.8rem",fontWeight:600}} onClick={()=>setTab("pricing")}>upgrade to Premium</button> for unlimited trips</p>
+                    : <p style={{fontSize:"0.8rem",color:"var(--warm-gray)",marginTop:"0.5rem"}}>{BASIC_LIMIT-usageCount} remaining this month · <button style={{background:"none",border:"none",color:"var(--gold)",cursor:"pointer",fontSize:"0.8rem",fontWeight:600}} onClick={()=>setTab("pricing")}>see Premium</button></p>
+                  }
+                </div>
+              </div>
+            )}
+
+            <div style={{textAlign:"center",marginBottom:"2rem"}}>
+              <button className="btn-gold" onClick={()=>setTab("generate")}>✦ Generate a custom trip</button>
+            </div>
+
+            <div className="dashboard-grid">
+              {SAMPLE_TRIPS.map((trip,i)=>(
+                <div key={i} className="trip-card" onClick={()=>handleTripClick(trip)}>
+                  <div className="trip-card-img">
+                    {trip.emoji}
+                    {trip.premium && !isPremium && <div className="lock-overlay">🔒</div>}
+                  </div>
+                  <div className="trip-card-body">
+                    <div className="trip-card-dest">{trip.dest}</div>
+                    <div className="trip-card-title">{trip.title}</div>
+                    <div className="trip-card-meta">{trip.days} · Best time: {trip.meta}</div>
+                    <div className="trip-card-tags">
+                      {trip.tags.map(t=><span key={t} className="tag">{t}</span>)}
+                      {trip.premium && !isPremium && <span className="tag premium-tag">✦ Premium</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* GENERATE */}
+        {onboarded && tab==="generate" && (
+          <div style={{paddingTop:"2.5rem",paddingBottom:"3rem"}}>
+            <div className="gen-card">
+              <div style={{marginBottom:"1.25rem"}}>
+                <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:"1.5rem",fontWeight:600,marginBottom:"0.3rem"}}>Generate an itinerary</div>
+                <div style={{fontSize:"0.85rem",color:"var(--warm-gray)"}}>
+                  {isPremium ? "✦ Unlimited · Premium plan" : `${Math.max(0,BASIC_LIMIT-usageCount)} of ${BASIC_LIMIT} remaining this month`}
+                </div>
+              </div>
+              <div className="gen-row">
+                <div className="gen-field">
+                  <label>Destination</label>
+                  <input placeholder="e.g. Lisbon, Portugal" value={destination} onChange={e=>setDestination(e.target.value)} />
+                </div>
+                <div className="gen-field" style={{maxWidth:120}}>
+                  <label>Days</label>
+                  <select value={tripDays} onChange={e=>setTripDays(e.target.value)}>
+                    {["3","4","5","6","7","10"].map(d=><option key={d}>{d}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="gen-row" style={{marginBottom:0}}>
+                <div className="gen-field">
+                  <label>Focus</label>
+                  <input placeholder="e.g. food, wine, architecture, hiking" value={travelStyle} onChange={e=>setTravelStyle(e.target.value)} />
+                </div>
+              </div>
+              <div style={{marginTop:"1.25rem"}}>
+                <button className="btn-primary" onClick={handleGenerateClick} disabled={generating||!destination}>
+                  {generating ? "Crafting your itinerary…" : atLimit ? "✦ Upgrade to generate more" : "✦ Generate itinerary"}
+                </button>
+              </div>
+            </div>
+
+            {(generating||streamText) && (
+              <div className="streaming-card">
+                {generating && <div className="loading-bar"><div className="loading-bar-fill"/></div>}
+                {generating && !streamText && (
+                  <div style={{color:"var(--warm-gray)",fontSize:"0.9rem",marginBottom:"1rem"}}>✦ Researching {destination}…</div>
+                )}
+                <div ref={streamRef} className="stream-text" style={{maxHeight:"600px",overflowY:"auto"}}>
+                  {streamText}
+                  {generating && <span className="cursor"/>}
+                </div>
+                {done && (
+                  <div style={{marginTop:"2rem",paddingTop:"1.5rem",borderTop:"1px solid var(--sand)",display:"flex",gap:"0.75rem",flexWrap:"wrap"}}>
+                    <button className="btn-gold" onClick={()=>navigator.clipboard.writeText(streamText)}>Copy itinerary</button>
+                    {isPremium && <button className="btn-gold">↓ Export PDF</button>}
+                    <button className="btn-gold" onClick={()=>{setStreamText("");setDone(false);}}>Generate another</button>
+                    <button className="btn-ghost" onClick={()=>setTab("dashboard")}>← Back</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PRICING */}
+        {onboarded && tab==="pricing" && <PricingPage />}
+      </div>
+    </>
+  );
+}
