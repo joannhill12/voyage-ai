@@ -1,6 +1,10 @@
 const Anthropic = require('@anthropic-ai/sdk');
 
 module.exports = async (req, res) => {
+  if (req.method !== 'POST') {
+    return res.status(200).json({ status: 'VoyageAI API ready' });
+  }
+
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const { prompt } = req.body;
 
