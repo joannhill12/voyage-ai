@@ -216,9 +216,9 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
 
     try {
       const resp = await fetch("/api/generate", {
-        method: "POST",
+        method: "POST", 
         headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 1800, stream: true, messages: [{ role: "user", content: prompt }] })
+        body: JSON.stringify({ prompt: prompt })
       });
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
@@ -233,8 +233,8 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
           const data = line.slice(6); if (data === "[DONE]") continue;
           try {
             const json = JSON.parse(data);
-            if (json.type === "content_block_delta" && json.delta?.text) {
-              setStreamText(prev => prev + json.delta.text);
+            if (json.text) {
+              setStreamText(prev => prev + json.text);
               if (streamRef.current) streamRef.current.scrollTop = streamRef.current.scrollHeight;
             }
           } catch {}
