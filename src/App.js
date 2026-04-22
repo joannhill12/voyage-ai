@@ -142,7 +142,7 @@ const SAMPLE_TRIPS = [
   { emoji:"🇹🇼", dest:"Taipei, Taiwan",      title:"Night Markets & Mountains",  days:"6 days", tags:["Food","Nature","City"],            meta:"Oct–Dec",     premium:true  },
 ];
 
-const BASIC_LIMIT = 999;
+const BASIC_LIMIT = 3;
 
 export default function App() {
   const [tab, setTab]                     = useState("onboard");
@@ -216,32 +216,18 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
 
     try {
       const resp = await fetch("/api/generate", {
-        method: "POST", 
-        headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: prompt })
       });
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      while (true) {
-        const { done: sd, value } = await reader.read();
-        if (sd) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n"); buffer = lines.pop();
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          const data = line.slice(6); if (data === "[DONE]") continue;
-          try {
-            const json = JSON.parse(data);
-            if (json.text) {
-              setStreamText(prev => prev + json.text);
-              if (streamRef.current) streamRef.current.scrollTop = streamRef.current.scrollHeight;
-            }
-          } catch {}
-        }
+      const data = await resp.json();
+      if (data.text) {
+        setStreamText(data.text);
+      } else {
+        setStreamText("Something went wrong. Please try again.");
       }
     } catch {
-      setStreamText("Unable to reach the AI. Please check your API key is set correctly in your environment variables.");
+      setStreamText("Unable to reach the AI. Please try again.");
     }
     setGenerating(false); setDone(true);
   }
