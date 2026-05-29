@@ -2,7 +2,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
-    return res.status(200).json({ status: 'Checkout API ready' });
+    return res.status(200).json({ status: 'Checkout API ready', hasKey: !!process.env.STRIPE_SECRET_KEY });
   }
 
   try {
@@ -18,6 +18,6 @@ module.exports = async (req, res) => {
 
     res.status(200).json({ url: session.url });
   } catch (err) {
-    res.status(200).json({ error: err.message });
+    res.status(200).json({ error: err.message, priceId: req.body.priceId });
   }
 };
