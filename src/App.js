@@ -179,7 +179,7 @@ export default function App() {
     generateItinerary();
   }
 
-  function upgradeToPremium() { setPlan("premium"); setShowPaywall(false); }
+  function upgradeToPremium() { import("./stripe").then(m => m.redirectToCheckout(process.env.REACT_APP_STRIPE_PREMIUM_PRICE_ID)); }
 
   async function generateItinerary() {
     if (!destination) return;
