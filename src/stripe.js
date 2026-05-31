@@ -9,9 +9,9 @@ export async function redirectToCheckout(priceId) {
     if (data.url) {
       window.location.href = data.url;
     } else {
-      alert('Something went wrong. Please try again.');
+      alert('Error: ' + (data.error || 'Something went wrong'));
     }
   } catch (err) {
-    alert('Unable to connect to payment system. Please try again.');
+    alert('Error: ' + err.message);
   }
 }

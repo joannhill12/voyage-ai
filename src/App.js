@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { redirectToCheckout } from "./stripe";
 
 const STYLE = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap');
@@ -179,7 +180,7 @@ export default function App() {
     generateItinerary();
   }
 
-  function upgradeToPremium() { import("./stripe").then(m => m.redirectToCheckout(process.env.REACT_APP_STRIPE_PREMIUM_PRICE_ID)); }
+  function upgradeToPremium() { redirectToCheckout(process.env.REACT_APP_STRIPE_PREMIUM_PRICE_ID); }
 
   async function generateItinerary() {
     if (!destination) return;
