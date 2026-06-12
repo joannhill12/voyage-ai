@@ -294,7 +294,8 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
       });
       const data = await resp.json();
       if (data.text) {
-        setStreamText(data.text); saveItinerary(data.text, destination, tripDays, travelStyle);
+        setStreamText(data.text);
+        saveItinerary(data.text, destination, tripDays, travelStyle);
       } else {
         setStreamText("Something went wrong. Please try again.");
       }
