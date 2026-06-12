@@ -149,6 +149,13 @@ const STYLE = `
   .itinerary-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--sand); }
   .itinerary-modal-text { font-size: 0.95rem; line-height: 1.8; color: var(--ink); white-space: pre-wrap; }
   .itinerary-modal-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--sand); }
+  .booking-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--sand); }
+  .booking-title { font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 0.9rem; }
+  .booking-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.6rem; }
+  .booking-link { display: flex; align-items: center; gap: 0.6rem; padding: 0.75rem 1rem; border-radius: 0.75rem; border: 1px solid var(--sand); background: var(--cream); text-decoration: none; color: var(--ink); font-size: 0.85rem; font-weight: 500; transition: all 0.2s; }
+  .booking-link:hover { border-color: var(--gold); background: var(--white); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(201,168,76,0.15); }
+  .booking-link-icon { font-size: 1.1rem; }
+  .booking-disclaimer { font-size: 0.7rem; color: var(--warm-gray); margin-top: 0.75rem; font-style: italic; }
   @media(max-width:600px){ .nav{padding:1rem 1.25rem} .card,.streaming-card,.gen-card{padding:1.5rem;border-radius:1.25rem} .hero{padding:3rem 1.25rem 2rem} .modal{padding:2rem 1.5rem;border-radius:1.5rem} .itinerary-modal-content{padding:1.5rem} }
 `;
 
@@ -305,6 +312,31 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
     setGenerating(false); setDone(true);
   }
 
+  // Booking links — uses generic search URLs now, swap in affiliate IDs once approved
+  const BookingLinks = ({ dest }) => {
+    const q = encodeURIComponent(dest);
+    const links = [
+      { icon: "🏨", label: "Find hotels", url: `https://www.booking.com/searchresults.html?ss=${q}` },
+      { icon: "✈️", label: "Search flights", url: `https://www.google.com/travel/flights?q=Flights+to+${q}` },
+      { icon: "🍽️", label: "Book restaurants", url: `https://www.opentable.com/s?term=${q}` },
+      { icon: "🎟️", label: "Find experiences", url: `https://www.viator.com/searchResults/all?text=${q}` },
+    ];
+    return (
+      <div className="booking-section">
+        <div className="booking-title">✦ Book This Trip</div>
+        <div className="booking-grid">
+          {links.map(l => (
+            <a key={l.label} className="booking-link" href={l.url} target="_blank" rel="noopener noreferrer">
+              <span className="booking-link-icon">{l.icon}</span>
+              <span>{l.label}</span>
+            </a>
+          ))}
+        </div>
+        <p className="booking-disclaimer">Opens trusted booking partners in a new tab. PlanWithVoyage may earn a commission on bookings made through these links — at no extra cost to you.</p>
+      </div>
+    );
+  };
+
   const PaywallModal = () => (
     <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) setShowPaywall(false); }}>
       <div className="modal">
@@ -368,6 +400,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
           <button className="modal-close" onClick={() => setViewingTrip(null)}>✕</button>
         </div>
         <div className="itinerary-modal-text">{trip.text}</div>
+        <BookingLinks dest={trip.destination} />
         <div className="itinerary-modal-actions">
           <button className="btn-gold" onClick={() => navigator.clipboard.writeText(trip.text)}>Copy</button>
           {isPremium
@@ -654,6 +687,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
                 {generating && <div className="loading-bar"><div className="loading-bar-fill" /></div>}
                 {generating && !streamText && <div style={{ color:"var(--warm-gray)", fontSize:"0.9rem", marginBottom:"1rem" }}>✦ Researching {destination}…</div>}
                 <div ref={streamRef} className="stream-text">{streamText}{generating && <span className="cursor" />}</div>
+                {done && <BookingLinks dest={destination} />}
                 {done && (
                   <div style={{ marginTop:"2rem", paddingTop:"1.5rem", borderTop:"1px solid var(--sand)", display:"flex", gap:"0.75rem", flexWrap:"wrap" }}>
                     <button className="btn-gold" onClick={() => navigator.clipboard.writeText(streamText)}>Copy</button>
