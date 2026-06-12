@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { redirectToCheckout } from "./stripe";
 
 const STYLE = `
@@ -129,27 +129,7 @@ const STYLE = `
   .guarantee { text-align: center; padding: 2rem; background: var(--white); border: 1px solid var(--sand); border-radius: 1.25rem; margin-top: 2rem; }
   .guarantee h4 { font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; margin-bottom: 0.4rem; }
   .guarantee p { font-size: 0.85rem; color: var(--warm-gray); max-width: 380px; margin: 0 auto; line-height: 1.6; }
-  .saved-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem; max-width: 960px; margin: 0 auto 3rem; padding: 0 1.5rem; }
-  .saved-card { background: var(--white); border: 1px solid rgba(201,168,76,0.15); border-radius: 1.25rem; padding: 1.5rem; cursor: pointer; transition: all 0.25s; box-shadow: 0 2px 16px rgba(15,14,13,0.04); }
-  .saved-card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(15,14,13,0.1); border-color: var(--gold); }
-  .saved-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; }
-  .saved-card-dest { font-size: 0.7rem; color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; margin-bottom: 0.3rem; }
-  .saved-card-title { font-family: 'Cormorant Garamond', serif; font-size: 1.15rem; font-weight: 600; line-height: 1.3; }
-  .saved-card-meta { font-size: 0.78rem; color: var(--warm-gray); margin-top: 0.5rem; }
-  .saved-card-preview { font-size: 0.82rem; color: var(--warm-gray); line-height: 1.6; margin-top: 0.75rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .saved-card-actions { display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; }
-  .delete-btn { padding: 0.35rem 0.75rem; border-radius: 2rem; border: 1px solid var(--sand); background: transparent; color: var(--warm-gray); font-size: 0.75rem; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
-  .delete-btn:hover { border-color: #c0392b; color: #c0392b; }
-  .empty-state { text-align: center; padding: 4rem 2rem; max-width: 400px; margin: 0 auto; }
-  .empty-state-icon { font-size: 3rem; margin-bottom: 1rem; }
-  .empty-state h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; }
-  .empty-state p { font-size: 0.9rem; color: var(--warm-gray); line-height: 1.6; margin-bottom: 1.5rem; }
-  .itinerary-modal { position: fixed; inset: 0; background: rgba(15,14,13,0.7); backdrop-filter: blur(4px); z-index: 300; display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem; overflow-y: auto; }
-  .itinerary-modal-content { background: var(--white); border-radius: 1.5rem; padding: 2.5rem; max-width: 680px; width: 100%; box-shadow: 0 24px 80px rgba(15,14,13,0.2); margin: auto; }
-  .itinerary-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--sand); }
-  .itinerary-modal-text { font-size: 0.95rem; line-height: 1.8; color: var(--ink); white-space: pre-wrap; }
-  .itinerary-modal-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--sand); }
-  @media(max-width:600px){ .nav{padding:1rem 1.25rem} .card,.streaming-card,.gen-card{padding:1.5rem;border-radius:1.25rem} .hero{padding:3rem 1.25rem 2rem} .modal{padding:2rem 1.5rem;border-radius:1.5rem} .itinerary-modal-content{padding:1.5rem} }
+  @media(max-width:600px){ .nav{padding:1rem 1.25rem} .card,.streaming-card,.gen-card{padding:1.5rem;border-radius:1.25rem} .hero{padding:3rem 1.25rem 2rem} .modal{padding:2rem 1.5rem;border-radius:1.5rem} }
 `;
 
 const SAMPLE_TRIPS = [
@@ -163,15 +143,7 @@ const SAMPLE_TRIPS = [
   { emoji:"🇹🇼", dest:"Taipei, Taiwan",      title:"Night Markets & Mountains",  days:"6 days", tags:["Food","Nature","City"],            meta:"Oct–Dec",     premium:true  },
 ];
 
-const BASIC_LIMIT = 999;
-const STORAGE_KEY = "pwv_saved_itineraries";
-
-function loadSaved() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
-}
-function saveSaved(items) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch {}
-}
+const BASIC_LIMIT = 3;
 
 export default function App() {
   const [tab, setTab]                     = useState("onboard");
@@ -188,24 +160,11 @@ export default function App() {
   const [onboarded, setOnboarded]         = useState(false);
   const [showPaywall, setShowPaywall]     = useState(false);
   const [paywallReason, setPaywallReason] = useState("limit");
-  const [savedTrips, setSavedTrips]       = useState(loadSaved);
-  const [viewingTrip, setViewingTrip]     = useState(null);
   const streamRef = useRef(null);
 
   const styleOptions = ["Food-Focused","Cultural","Adventure","Walkable Cities","Hidden Gems","Romantic","Art & Design","Nature"];
   const isPremium = plan === "premium";
   const atLimit   = !isPremium && usageCount >= BASIC_LIMIT;
-
-  useEffect(() => { saveSaved(savedTrips); }, [savedTrips]);
-
-  // Check for successful upgrade from Stripe
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("upgraded") === "true") {
-      setPlan("premium");
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
 
   function toggleStyle(s) {
     setProfile(p => ({ ...p, styles: p.styles.includes(s) ? p.styles.filter(x => x !== s) : [...p.styles, s] }));
@@ -221,37 +180,7 @@ export default function App() {
     generateItinerary();
   }
 
-  function upgradeToPremium() {
-    redirectToCheckout(process.env.REACT_APP_STRIPE_PREMIUM_PRICE_ID);
-  }
-
-  function saveItinerary(text, dest, days, style) {
-    const trip = {
-      id: Date.now(),
-      destination: dest,
-      days,
-      style,
-      text,
-      date: new Date().toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }),
-      title: dest,
-    };
-    setSavedTrips(prev => [trip, ...prev]);
-  }
-
-  function deleteTrip(id) {
-    setSavedTrips(prev => prev.filter(t => t.id !== id));
-  }
-
-  function downloadPDF(trip) {
-    const content = `PLANWITHVOYAGE ITINERARY\n${"=".repeat(40)}\n${trip.destination} · ${trip.days} days\nGenerated: ${trip.date}\n${"=".repeat(40)}\n\n${trip.text}\n\n${"=".repeat(40)}\nplanwithvoyage.com`;
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${trip.destination.replace(/[^a-z0-9]/gi, "-")}-itinerary.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
+  function upgradeToPremium() { redirectToCheckout(process.env.REACT_APP_STRIPE_PREMIUM_PRICE_ID); }
 
   async function generateItinerary() {
     if (!destination) return;
@@ -287,15 +216,14 @@ Format it exactly like this:
 Be specific — real restaurants, real neighborhoods, real experiences. No generic advice.`;
 
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      const resp = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 1800, messages: [{ role: "user", content: prompt }] })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt })
       });
       const data = await resp.json();
-      if (data.content[0].text) {
+      if (data.text) {
         setStreamText(data.text);
-        saveItinerary(data.text, destination, tripDays, travelStyle);
       } else {
         setStreamText("Something went wrong. Please try again.");
       }
@@ -357,29 +285,6 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
     </div>
   );
 
-  const ItineraryModal = ({ trip }) => (
-    <div className="itinerary-modal" onClick={e => { if (e.target === e.currentTarget) setViewingTrip(null); }}>
-      <div className="itinerary-modal-content">
-        <div className="itinerary-modal-header">
-          <div>
-            <div style={{ fontSize:"0.7rem", color:"var(--gold)", letterSpacing:"0.12em", textTransform:"uppercase", fontWeight:600, marginBottom:"0.25rem" }}>{trip.destination}</div>
-            <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.4rem", fontWeight:600 }}>{trip.days} days · {trip.date}</div>
-          </div>
-          <button className="modal-close" onClick={() => setViewingTrip(null)}>✕</button>
-        </div>
-        <div className="itinerary-modal-text">{trip.text}</div>
-        <div className="itinerary-modal-actions">
-          <button className="btn-gold" onClick={() => navigator.clipboard.writeText(trip.text)}>Copy</button>
-          {isPremium
-            ? <button className="btn-gold" onClick={() => downloadPDF(trip)}>↓ Download PDF</button>
-            : <button className="btn-gold" onClick={() => { setViewingTrip(null); setPaywallReason("limit"); setShowPaywall(true); }}>↓ PDF (Premium)</button>
-          }
-          <button className="btn-ghost" onClick={() => setViewingTrip(null)}>Close</button>
-        </div>
-      </div>
-    </div>
-  );
-
   const PricingPage = () => (
     <div className="pricing-wrap">
       <div className="pricing-header">
@@ -394,7 +299,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
           <div className="pricing-price-sub">per month · billed monthly</div>
           <div className="p-divider" />
           <ul className="pricing-features">
-            {[["3 AI itineraries per month",false],["Core destination library (25+ cities)",false],["Day-by-day plan with dining & activities",false],["Insider tips & logistics",false],["Saved itinerary library",false],["Premium destinations",true],["Unlimited itinerary generation",true],["PDF export",true],["Flight deal alerts",true]].map(([feat,muted],i) => (
+            {[["3 AI itineraries per month",false],["Core destination library (25+ cities)",false],["Day-by-day plan with dining & activities",false],["Insider tips & logistics",false],["Email delivery of curated trips",false],["Premium destinations",true],["Unlimited itinerary generation",true],["PDF export",true],["Flight deal alerts",true]].map(([feat,muted],i) => (
               <li key={i} className="pricing-feature-item">
                 <span className="feat-icon">{muted ? "○" : "✦"}</span>
                 <span className={muted ? "feat-muted" : ""}>{feat}</span>
@@ -413,7 +318,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
           <div className="pricing-price-sub">per month · billed monthly</div>
           <div className="p-divider" />
           <ul className="pricing-features">
-            {["Unlimited AI itineraries","Full destination library (50+ cities)","Premium & off-the-beaten-path destinations","Day-by-day plan with dining & activities","Insider tips & logistics","Saved itinerary library","PDF download & export","Flight deal alerts","Priority access to new destinations"].map((feat,i) => (
+            {["Unlimited AI itineraries","Full destination library (50+ cities)","Premium & off-the-beaten-path destinations","Day-by-day plan with dining & activities","Insider tips & logistics","Weekly curated trip drops via email","PDF download & export","Flight deal alerts","Priority access to new destinations"].map((feat,i) => (
               <li key={i} className="pricing-feature-item">
                 <span className="feat-icon">✦</span>
                 <span>{feat}</span>
@@ -433,7 +338,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
           <table className="compare-table">
             <thead><tr><th>Feature</th><th>Basic · $29</th><th className="col-prem">Premium · $79</th></tr></thead>
             <tbody>
-              {[["Monthly itineraries","3","Unlimited"],["Core destinations (25+)","✦","✦"],["Premium destinations","✕","✦"],["Day-by-day planning","✦","✦"],["Dining recommendations","✦","✦"],["Insider tips & logistics","✦","✦"],["Saved itinerary library","✦","✦"],["PDF export","✕","✦"],["Weekly email drops","✕","✦"],["Flight deal alerts","✕","✦"],["Cancel anytime","✦","✦"]].map(([feat,basic,prem]) => (
+              {[["Monthly itineraries","3","Unlimited"],["Core destinations (25+)","✦","✦"],["Premium destinations","✕","✦"],["Day-by-day planning","✦","✦"],["Dining recommendations","✦","✦"],["Insider tips & logistics","✦","✦"],["PDF export","✕","✦"],["Weekly email drops","✕","✦"],["Flight deal alerts","✕","✦"],["Cancel anytime","✦","✦"]].map(([feat,basic,prem]) => (
                 <tr key={feat}>
                   <td>{feat}</td>
                   <td><span className={basic==="✦"?"c-check":basic==="✕"?"c-cross":""}>{basic}</span></td>
@@ -448,48 +353,6 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
         <h4>7-day money-back guarantee</h4>
         <p>Try Premium risk-free. Not right for you in the first 7 days? Full refund, no questions asked.</p>
       </div>
-    </div>
-  );
-
-  const SavedTripsPage = () => (
-    <div>
-      <div className="hero" style={{ paddingBottom:"1.5rem" }}>
-        <div className="hero-eyebrow">✦ Your travel library</div>
-        <h1 style={{ fontSize:"clamp(2rem,4vw,3rem)" }}>Saved<br /><em>itineraries</em></h1>
-        <p>Every trip you generate is saved here automatically.</p>
-      </div>
-      {savedTrips.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">🗺️</div>
-          <h3>No saved trips yet</h3>
-          <p>Generate your first itinerary and it will appear here automatically — ready to view, copy, or download anytime.</p>
-          <button className="btn-gold" onClick={() => setTab("generate")}>✦ Generate your first trip</button>
-        </div>
-      ) : (
-        <div className="saved-grid">
-          {savedTrips.map(trip => (
-            <div key={trip.id} className="saved-card">
-              <div className="saved-card-header">
-                <div>
-                  <div className="saved-card-dest">{trip.destination}</div>
-                  <div className="saved-card-title">{trip.days} days · {trip.style}</div>
-                </div>
-                <span style={{ fontSize:"0.75rem", color:"var(--warm-gray)" }}>{trip.date}</span>
-              </div>
-              <div className="saved-card-preview">{trip.text}</div>
-              <div className="saved-card-actions">
-                <button className="btn-gold" style={{ padding:"0.4rem 0.9rem", fontSize:"0.8rem" }} onClick={() => setViewingTrip(trip)}>View</button>
-                <button className="btn-gold" style={{ padding:"0.4rem 0.9rem", fontSize:"0.8rem" }} onClick={() => navigator.clipboard.writeText(trip.text)}>Copy</button>
-                {isPremium
-                  ? <button className="btn-gold" style={{ padding:"0.4rem 0.9rem", fontSize:"0.8rem" }} onClick={() => downloadPDF(trip)}>↓ PDF</button>
-                  : <button className="btn-ghost" style={{ padding:"0.4rem 0.9rem", fontSize:"0.8rem" }} onClick={() => { setPaywallReason("limit"); setShowPaywall(true); }}>↓ PDF ✦</button>
-                }
-                <button className="delete-btn" onClick={() => deleteTrip(trip.id)}>Delete</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 
@@ -546,19 +409,15 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
       <style>{STYLE}</style>
       <div className="app">
         {showPaywall && <PaywallModal />}
-        {viewingTrip && <ItineraryModal trip={viewingTrip} />}
         <nav className="nav">
-          <div className="nav-logo">Plan With<span>Voyage</span></div>
+          <div className="nav-logo">Voyage<span>AI</span></div>
           <div className="nav-right">
             {!onboarded ? (
               <button className="nav-tab active">Setup</button>
             ) : (
               <>
-                <button className={`nav-tab ${tab === "dashboard" ? "active" : ""}`} onClick={() => setTab("dashboard")}>Explore</button>
+                <button className={`nav-tab ${tab === "dashboard" ? "active" : ""}`} onClick={() => setTab("dashboard")}>My Trips</button>
                 <button className={`nav-tab ${tab === "generate" ? "active" : ""}`} onClick={() => setTab("generate")}>Generate</button>
-                <button className={`nav-tab ${tab === "saved" ? "active" : ""}`} onClick={() => setTab("saved")}>
-                  Saved {savedTrips.length > 0 && <span style={{ background:"var(--gold)", color:"var(--ink)", borderRadius:"2rem", fontSize:"0.65rem", padding:"0.1rem 0.45rem", marginLeft:"0.3rem", fontWeight:700 }}>{savedTrips.length}</span>}
-                </button>
                 <button className={`nav-tab ${tab === "pricing" ? "active" : ""}`} onClick={() => setTab("pricing")}>Pricing</button>
                 <span className={`nav-plan-badge ${isPremium ? "premium" : "basic"}`}>{isPremium ? "✦ Premium" : "Basic"}</span>
               </>
@@ -571,7 +430,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
             <div className="hero">
               <div className="hero-eyebrow">✦ Your AI Travel Concierge</div>
               <h1>Travel more.<br /><em>Plan less.</em></h1>
-              <p>PlanWithVoyage automatically delivers curated, ready-to-book itineraries tailored to you — no research required.</p>
+              <p>VoyageAI automatically delivers curated, ready-to-book itineraries tailored to you — no research required.</p>
             </div>
             <div className="steps">{[0,1,2,3].map(i => (<div key={i} className={`step-dot ${i === step ? "active" : i < step ? "done" : ""}`} />))}</div>
             <div className="card">{onboardSteps[step]}</div>
@@ -656,12 +515,8 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
                 <div ref={streamRef} className="stream-text">{streamText}{generating && <span className="cursor" />}</div>
                 {done && (
                   <div style={{ marginTop:"2rem", paddingTop:"1.5rem", borderTop:"1px solid var(--sand)", display:"flex", gap:"0.75rem", flexWrap:"wrap" }}>
-                    <button className="btn-gold" onClick={() => navigator.clipboard.writeText(streamText)}>Copy</button>
-                    {isPremium
-                      ? <button className="btn-gold" onClick={() => downloadPDF({ text:streamText, destination, days:tripDays, date:new Date().toLocaleDateString() })}>↓ PDF</button>
-                      : <button className="btn-ghost" onClick={() => { setPaywallReason("limit"); setShowPaywall(true); }}>↓ PDF (Premium)</button>
-                    }
-                    <button className="btn-gold" onClick={() => setTab("saved")}>View saved trips →</button>
+                    <button className="btn-gold" onClick={() => navigator.clipboard.writeText(streamText)}>Copy itinerary</button>
+                    {isPremium && <button className="btn-gold">↓ Export PDF</button>}
                     <button className="btn-gold" onClick={() => { setStreamText(""); setDone(false); }}>Generate another</button>
                     <button className="btn-ghost" onClick={() => setTab("dashboard")}>← Back</button>
                   </div>
@@ -671,7 +526,6 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
           </div>
         )}
 
-        {onboarded && tab === "saved" && <SavedTripsPage />}
         {onboarded && tab === "pricing" && <PricingPage />}
       </div>
     </>
