@@ -163,7 +163,7 @@ const SAMPLE_TRIPS = [
   { emoji:"🇹🇼", dest:"Taipei, Taiwan",      title:"Night Markets & Mountains",  days:"6 days", tags:["Food","Nature","City"],            meta:"Oct–Dec",     premium:true  },
 ];
 
-const BASIC_LIMIT = 999;
+const BASIC_LIMIT = 3;
 const STORAGE_KEY = "pwv_saved_itineraries";
 
 function loadSaved() {
@@ -287,15 +287,14 @@ Format it exactly like this:
 Be specific — real restaurants, real neighborhoods, real experiences. No generic advice.`;
 
     try {
-      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      const resp = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": process.env.REACT_APP_ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-        body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 1800, messages: [{ role: "user", content: prompt }] })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
       });
       const data = await resp.json();
-      if (data.content[0].text) {
-        setStreamText(data.text);
-        saveItinerary(data.text, destination, tripDays, travelStyle);
+      if (data.text) {
+        setStreamText(data.text); saveItinerary(data.text, destination, tripDays, travelStyle);
       } else {
         setStreamText("Something went wrong. Please try again.");
       }
