@@ -172,6 +172,7 @@ const SAMPLE_TRIPS = [
 
 const BASIC_LIMIT = 3;
 const STORAGE_KEY = "pwv_saved_itineraries";
+const PROFILE_KEY = "pwv_profile";
 
 function loadSaved() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
@@ -179,11 +180,23 @@ function loadSaved() {
 function saveSaved(items) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch {}
 }
+function loadProfile() {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+function saveProfile(profile) {
+  try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch {}
+}
+
+const DEFAULT_PROFILE = { name:"", airport:"", budget:"2000-5000", styles:[], tripLength:"4-6", pace:50, crowds:30 };
 
 export default function App() {
-  const [tab, setTab]                     = useState("onboard");
+  const savedProfile = loadProfile();
+  const [tab, setTab]                     = useState(savedProfile ? "dashboard" : "onboard");
   const [step, setStep]                   = useState(0);
-  const [profile, setProfile]             = useState({ name:"", airport:"", budget:"2000-5000", styles:[], tripLength:"4-6", pace:50, crowds:30 });
+  const [profile, setProfile]             = useState(savedProfile || DEFAULT_PROFILE);
   const [plan, setPlan]                   = useState("basic");
   const [usageCount, setUsageCount]       = useState(0);
   const [generating, setGenerating]       = useState(false);
@@ -193,18 +206,19 @@ export default function App() {
   const [tripDays, setTripDays]           = useState("5");
   const [travelDate, setTravelDate]       = useState("");
   const [travelStyle, setTravelStyle]     = useState("food and culture");
-  const [onboarded, setOnboarded]         = useState(false);
+  const [onboarded, setOnboarded]         = useState(!!savedProfile);
   const [showPaywall, setShowPaywall]     = useState(false);
   const [paywallReason, setPaywallReason] = useState("limit");
   const [savedTrips, setSavedTrips]       = useState(loadSaved);
   const [viewingTrip, setViewingTrip]     = useState(null);
   const streamRef = useRef(null);
 
-  const styleOptions = ["Food-Focused","Cultural","Adventure","Walkable Cities","Hidden Gems","Romantic","Art & Design","Nature"];
+  const styleOptions = ["Food-Focused","Cultural","Adventure","Walkable Cities","Hidden Gems","Romantic","Art & Design","Nature","Beach","Active"];
   const isPremium = plan === "premium";
   const atLimit   = !isPremium && usageCount >= BASIC_LIMIT;
 
   useEffect(() => { saveSaved(savedTrips); }, [savedTrips]);
+  useEffect(() => { if (onboarded) saveProfile(profile); }, [profile, onboarded]);
 
   // Check for successful upgrade from Stripe
   useEffect(() => {
@@ -635,6 +649,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
               <div className="hero-eyebrow">✦ Welcome back{profile.name ? `, ${profile.name}` : ""}</div>
               <h1 style={{ fontSize:"clamp(2rem,4vw,3rem)" }}>Your curated<br /><em>trip collection</em></h1>
               <p>Click any destination to generate a full AI itinerary.</p>
+              <button className="btn-ghost" style={{ marginTop:"0.75rem" }} onClick={() => { setStep(0); setOnboarded(false); setTab("onboard"); }}>Edit profile</button>
             </div>
             {!isPremium && (
               <div style={{ maxWidth:680, margin:"0 auto 1.5rem", padding:"0 1.5rem" }}>
@@ -688,11 +703,24 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
               <div className="gen-row">
                 <div className="gen-field"><label>Destination</label><input placeholder="e.g. Lisbon, Portugal" value={destination} onChange={e => setDestination(e.target.value)} /></div>
                 <div className="gen-field" style={{ maxWidth:120 }}><label>Days</label>
-                  <select value={tripDays} onChange={e => setTripDays(e.target.value)}>{["3","4","5","6","7","10"].map(d => <option key={d}>{d}</option>)}</select>
+                  <select value={tripDays} onChange={e => setTripDays(e.target.value)}>{["3","4","5","6","7","8","9","10","11","12","13","14","21","28"].map(d => <option key={d}>{d}</option>)}</select>
                 </div>
               </div>
               <div className="gen-row">
-                <div className="gen-field"><label>Travel dates (optional)</label><input type="date" value={travelDate} onChange={e => setTravelDate(e.target.value)} /></div>
+                <div className="gen-field">
+                  <label>Travel dates (optional)</label>
+                  <input type="date" value={travelDate} onChange={e => setTravelDate(e.target.value)} />
+                  {travelDate && (
+                    <div style={{ fontSize:"0.75rem", color:"var(--warm-gray)", marginTop:"0.4rem" }}>
+                      Return: {(() => {
+                        const start = new Date(travelDate + "T00:00:00");
+                        const end = new Date(start);
+                        end.setDate(end.getDate() + (parseInt(tripDays,10) || 5));
+                        return end.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+                      })()}
+                    </div>
+                  )}
+                </div>
                 <div className="gen-field"><label>Focus</label><input placeholder="food, wine, architecture, hiking..." value={travelStyle} onChange={e => setTravelStyle(e.target.value)} /></div>
               </div>
               <div style={{ marginTop:"1.25rem" }}>
