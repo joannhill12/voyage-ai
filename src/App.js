@@ -206,6 +206,8 @@ export default function App() {
   const [tripDays, setTripDays]           = useState("5");
   const [travelDate, setTravelDate]       = useState("");
   const [arrivalAirport, setArrivalAirport] = useState("");
+  const [multiMode, setMultiMode]           = useState(false);
+  const [legs, setLegs]                     = useState([{ dest:"", days:"3" }, { dest:"", days:"3" }]);
   const [travelStyle, setTravelStyle]     = useState("food and culture");
   const [onboarded, setOnboarded]         = useState(!!savedProfile);
   const [showPaywall, setShowPaywall]     = useState(false);
@@ -229,6 +231,11 @@ export default function App() {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
+
+  function addLeg() { setLegs(l => [...l, { dest:"", days:"3" }]); }
+  function removeLeg(i) { setLegs(l => l.filter((_,idx) => idx !== i)); }
+  function updateLeg(i, field, val) { setLegs(l => l.map((leg, idx) => idx === i ? { ...leg, [field]: val } : leg)); }
+  const totalMultiDays = legs.reduce((sum, l) => sum + (parseInt(l.days,10) || 0), 0);
 
   function toggleStyle(s) {
     setProfile(p => ({ ...p, styles: p.styles.includes(s) ? p.styles.filter(x => x !== s) : [...p.styles, s] }));
@@ -279,7 +286,11 @@ export default function App() {
   }
 
   async function generateItinerary() {
-    if (!destination) return;
+    if (multiMode) {
+      if (legs.some(l => !l.dest)) return;
+    } else {
+      if (!destination) return;
+    }
     setGenerating(true); setStreamText(""); setDone(false);
     setUsageCount(c => c + 1);
 
@@ -291,7 +302,46 @@ export default function App() {
       ? `CRITICAL: The traveler is flying into ${arrivalAirport}. Build the ENTIRE itinerary around this specific arrival point — routing, day order, and neighborhood/town recommendations must make sense starting from ${arrivalAirport}, not from any other airport or city in the region. Do not default to a different "main" airport or capital city if it doesn't match this arrival point.`
       : `No arrival airport specified — use the most logical/common entry point for this destination and mention it clearly.`;
 
-    const prompt = `You are a luxury travel concierge for affluent couples who value food, walkability, and curated experiences.
+    let prompt;
+    if (multiMode) {
+      const legSummary = legs.map((l,i) => `Leg ${i+1}: ${l.dest} (${l.days} days)`).join("\n");
+      const totalDays = legs.reduce((sum,l) => sum + (parseInt(l.days,10)||0), 0);
+      prompt = `You are a luxury travel concierge for affluent couples who value food, walkability, and curated experiences.
+Create a detailed multi-destination itinerary for the following trip (${totalDays} days total) focused on ${travelStyle}:
+
+${legSummary}
+
+${dateContext}
+${arrivalAirport ? arrivalContext : ""}
+
+For each destination leg, format it exactly like this:
+
+**[Destination]: [Evocative Leg Title]** (Days X-Y)
+*[One compelling sentence for this leg]*
+
+**Day X — [Day Theme]**
+• Morning (9:00 AM): [Activity] — [description with insider tip]
+• Lunch (12:30 PM): [Restaurant] — [what to order, why it's special]
+• Afternoon (2:30 PM): [Activity] — [description]
+• Evening (7:00 PM): [Dinner restaurant] — [description]
+
+[Repeat for each day of this leg]
+
+**Getting to the next destination** (if not last leg)
+• [Best way to travel between destinations — train, flight, car — with specific tips]
+
+[Repeat format for each leg]
+
+**Multi-Destination Insider Tips**
+• [3 tips specific to traveling between these destinations]
+
+**Overall Logistics**
+• Total budget estimate: [per person excluding flights]
+• Best way to book connecting transport: [advice]
+
+Be specific — real restaurants, real transport options, real neighborhoods. No generic advice.`;
+    } else {
+      prompt = `You are a luxury travel concierge for affluent couples who value food, walkability, and curated experiences.
 Create a detailed ${tripDays}-day itinerary for ${destination} focused on ${travelStyle}.
 ${dateContext}
 ${arrivalContext}
@@ -320,6 +370,10 @@ Format it exactly like this:
 • Budget estimate: [per-person for ${tripDays} days excluding flights]
 
 Be specific — real restaurants, real neighborhoods, real experiences. No generic advice.`;
+    }
+
+    const saveDestination = multiMode ? legs.map(l => l.dest).join(" → ") : destination;
+    const saveDays = multiMode ? String(totalMultiDays) : tripDays;
 
     try {
       const resp = await fetch("/api/generate", {
@@ -330,7 +384,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
       const data = await resp.json();
       if (data.text) {
         setStreamText(data.text);
-        saveItinerary(data.text, destination, tripDays, travelStyle, travelDate, arrivalAirport);
+        saveItinerary(data.text, saveDestination, saveDays, travelStyle, travelDate, arrivalAirport);
       } else {
         setStreamText("Something went wrong. Please try again.");
       }
@@ -705,49 +759,95 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
             <div className="gen-card">
               <div style={{ marginBottom:"1.25rem" }}>
                 <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.5rem", fontWeight:600, marginBottom:"0.3rem" }}>Generate an itinerary</div>
-                <div style={{ fontSize:"0.85rem", color:"var(--warm-gray)" }}>{isPremium ? "✦ Unlimited · Premium plan" : `${Math.max(0, BASIC_LIMIT - usageCount)} of ${BASIC_LIMIT} remaining this month`}</div>
-              </div>
-              <div className="gen-row">
-                <div className="gen-field"><label>Destination</label><input placeholder="e.g. Lisbon, Portugal" value={destination} onChange={e => setDestination(e.target.value)} /></div>
-                <div className="gen-field" style={{ maxWidth:120 }}><label>Days</label>
-                  <select value={tripDays} onChange={e => setTripDays(e.target.value)}>{["3","4","5","6","7","8","9","10","11","12","13","14","21","28"].map(d => <option key={d}>{d}</option>)}</select>
+                <div style={{ fontSize:"0.85rem", color:"var(--warm-gray)", marginBottom:"0.75rem" }}>{isPremium ? "✦ Unlimited · Premium plan" : `${Math.max(0, BASIC_LIMIT - usageCount)} of ${BASIC_LIMIT} remaining this month`}</div>
+                <div style={{ display:"flex", gap:"0.5rem" }}>
+                  <button onClick={() => setMultiMode(false)} style={{ padding:"0.4rem 1rem", borderRadius:"2rem", border:"1.5px solid", borderColor: !multiMode ? "var(--ink)" : "var(--sand)", background: !multiMode ? "var(--ink)" : "transparent", color: !multiMode ? "var(--cream)" : "var(--warm-gray)", fontSize:"0.8rem", cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Single destination</button>
+                  <button onClick={() => setMultiMode(true)} style={{ padding:"0.4rem 1rem", borderRadius:"2rem", border:"1.5px solid", borderColor: multiMode ? "var(--ink)" : "var(--sand)", background: multiMode ? "var(--ink)" : "transparent", color: multiMode ? "var(--cream)" : "var(--warm-gray)", fontSize:"0.8rem", cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>✦ Multi-destination</button>
                 </div>
               </div>
-              <div className="gen-row">
-                <div className="gen-field">
-                  <label>Travel dates (optional)</label>
-                  <input type="date" value={travelDate} onChange={e => setTravelDate(e.target.value)} />
-                  {travelDate && (
-                    <div style={{ fontSize:"0.75rem", color:"var(--warm-gray)", marginTop:"0.4rem" }}>
-                      Return: {(() => {
-                        const start = new Date(travelDate + "T00:00:00");
-                        const end = new Date(start);
-                        end.setDate(end.getDate() + (parseInt(tripDays,10) || 5));
-                        return end.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
-                      })()}
+
+              {multiMode ? (
+                <>
+                  {legs.map((leg, i) => (
+                    <div key={i} style={{ background:"var(--cream)", border:"1px solid var(--sand)", borderRadius:"0.75rem", padding:"1rem", marginBottom:"0.75rem", position:"relative" }}>
+                      <div style={{ fontSize:"0.7rem", color:"var(--gold)", fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", marginBottom:"0.6rem" }}>Leg {i+1}</div>
+                      <div className="gen-row" style={{ marginBottom:0 }}>
+                        <div className="gen-field"><label>Destination</label><input placeholder="e.g. Amalfi Coast, Italy" value={leg.dest} onChange={e => updateLeg(i,"dest",e.target.value)} /></div>
+                        <div className="gen-field" style={{ maxWidth:100 }}><label>Days</label>
+                          <select value={leg.days} onChange={e => updateLeg(i,"days",e.target.value)}>{["1","2","3","4","5","6","7","8","9","10","14"].map(d => <option key={d}>{d}</option>)}</select>
+                        </div>
+                        {legs.length > 2 && <button onClick={() => removeLeg(i)} style={{ alignSelf:"flex-end", padding:"0.65rem 0.75rem", background:"none", border:"1px solid var(--sand)", borderRadius:"0.65rem", cursor:"pointer", color:"var(--warm-gray)", fontSize:"0.85rem" }}>✕</button>}
+                      </div>
                     </div>
-                  )}
+                  ))}
+                  <div style={{ display:"flex", gap:"0.75rem", marginBottom:"1rem", alignItems:"center" }}>
+                    <button className="btn-ghost" style={{ padding:"0.5rem 1rem", fontSize:"0.85rem" }} onClick={addLeg}>+ Add destination</button>
+                    <span style={{ fontSize:"0.8rem", color:"var(--warm-gray)" }}>Total: {totalMultiDays} days</span>
+                  </div>
+                  <div className="gen-row">
+                    <div className="gen-field">
+                      <label>Travel dates (optional)</label>
+                      <input type="date" value={travelDate} onChange={e => setTravelDate(e.target.value)} />
+                      {travelDate && (
+                        <div style={{ fontSize:"0.75rem", color:"var(--warm-gray)", marginTop:"0.4rem" }}>
+                          Return: {(() => { const s = new Date(travelDate+"T00:00:00"); const e = new Date(s); e.setDate(e.getDate()+totalMultiDays); return e.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); })()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="gen-field"><label>Focus</label><input placeholder="food, wine, architecture, hiking..." value={travelStyle} onChange={e => setTravelStyle(e.target.value)} /></div>
+                  </div>
+                  <div className="gen-row" style={{ marginBottom:0 }}>
+                    <div className="gen-field">
+                      <label>Arrival airport / first city (optional)</label>
+                      <input placeholder="e.g. Naples, NAP" value={arrivalAirport} onChange={e => setArrivalAirport(e.target.value)} />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                <div className="gen-row">
+                  <div className="gen-field"><label>Destination</label><input placeholder="e.g. Lisbon, Portugal" value={destination} onChange={e => setDestination(e.target.value)} /></div>
+                  <div className="gen-field" style={{ maxWidth:120 }}><label>Days</label>
+                    <select value={tripDays} onChange={e => setTripDays(e.target.value)}>{["3","4","5","6","7","8","9","10","11","12","13","14","21","28"].map(d => <option key={d}>{d}</option>)}</select>
+                  </div>
                 </div>
-                <div className="gen-field"><label>Focus</label><input placeholder="food, wine, architecture, hiking..." value={travelStyle} onChange={e => setTravelStyle(e.target.value)} /></div>
-              </div>
-              <div className="gen-row" style={{ marginBottom:0 }}>
-                <div className="gen-field">
-                  <label>Arrival airport / city (optional)</label>
-                  <input placeholder="e.g. Olbia, OLB, or 'flying into Nice'" value={arrivalAirport} onChange={e => setArrivalAirport(e.target.value)} />
+                <div className="gen-row">
+                  <div className="gen-field">
+                    <label>Travel dates (optional)</label>
+                    <input type="date" value={travelDate} onChange={e => setTravelDate(e.target.value)} />
+                    {travelDate && (
+                      <div style={{ fontSize:"0.75rem", color:"var(--warm-gray)", marginTop:"0.4rem" }}>
+                        Return: {(() => {
+                          const start = new Date(travelDate + "T00:00:00");
+                          const end = new Date(start);
+                          end.setDate(end.getDate() + (parseInt(tripDays,10) || 5));
+                          return end.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                  <div className="gen-field"><label>Focus</label><input placeholder="food, wine, architecture, hiking..." value={travelStyle} onChange={e => setTravelStyle(e.target.value)} /></div>
                 </div>
-              </div>
+                <div className="gen-row" style={{ marginBottom:0 }}>
+                  <div className="gen-field">
+                    <label>Arrival airport / city (optional)</label>
+                    <input placeholder="e.g. Olbia, OLB, or 'flying into Nice'" value={arrivalAirport} onChange={e => setArrivalAirport(e.target.value)} />
+                  </div>
+                </div>
+                </>
+              )}
               <div style={{ marginTop:"1.25rem" }}>
-                <button className="btn-primary" onClick={handleGenerateClick} disabled={generating || !destination}>
-                  {generating ? "Crafting your itinerary…" : atLimit ? "✦ Upgrade to generate more" : "✦ Generate itinerary"}
+                <button className="btn-primary" onClick={handleGenerateClick} disabled={generating || (!multiMode && !destination) || (multiMode && legs.some(l => !l.dest))}>
+                  {generating ? "Crafting your itinerary…" : atLimit ? "✦ Upgrade to generate more" : multiMode ? `✦ Generate ${totalMultiDays}-day multi-destination trip` : "✦ Generate itinerary"}
                 </button>
               </div>
             </div>
             {(generating || streamText) && (
               <div className="streaming-card">
                 {generating && <div className="loading-bar"><div className="loading-bar-fill" /></div>}
-                {generating && !streamText && <div style={{ color:"var(--warm-gray)", fontSize:"0.9rem", marginBottom:"1rem" }}>✦ Researching {destination}…</div>}
+                {generating && !streamText && <div style={{ color:"var(--warm-gray)", fontSize:"0.9rem", marginBottom:"1rem" }}>✦ {multiMode ? `Planning your ${totalMultiDays}-day multi-destination trip…` : `Researching ${destination}…`}</div>}
                 <div ref={streamRef} className="stream-text">{streamText}{generating && <span className="cursor" />}</div>
-                {done && <BookingLinks dest={destination} checkin={travelDate} days={tripDays} />}
+                {done && <BookingLinks dest={multiMode ? legs[0].dest : destination} checkin={travelDate} days={multiMode ? String(totalMultiDays) : tripDays} />}
                 {done && (
                   <div style={{ marginTop:"2rem", paddingTop:"1.5rem", borderTop:"1px solid var(--sand)", display:"flex", gap:"0.75rem", flexWrap:"wrap" }}>
                     <button className="btn-gold" onClick={() => navigator.clipboard.writeText(streamText)}>Copy</button>
