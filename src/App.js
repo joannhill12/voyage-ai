@@ -205,6 +205,7 @@ export default function App() {
   const [destination, setDestination]     = useState("");
   const [tripDays, setTripDays]           = useState("5");
   const [travelDate, setTravelDate]       = useState("");
+  const [arrivalAirport, setArrivalAirport] = useState("");
   const [travelStyle, setTravelStyle]     = useState("food and culture");
   const [onboarded, setOnboarded]         = useState(!!savedProfile);
   const [showPaywall, setShowPaywall]     = useState(false);
@@ -247,7 +248,7 @@ export default function App() {
     redirectToCheckout(process.env.REACT_APP_STRIPE_PREMIUM_PRICE_ID);
   }
 
-  function saveItinerary(text, dest, days, style, tDate) {
+  function saveItinerary(text, dest, days, style, tDate, arrival) {
     const trip = {
       id: Date.now(),
       destination: dest,
@@ -255,6 +256,7 @@ export default function App() {
       style,
       text,
       travelDate: tDate || "",
+      arrivalAirport: arrival || "",
       date: new Date().toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }),
       title: dest,
     };
@@ -285,9 +287,14 @@ export default function App() {
       ? `The traveler plans to visit starting ${new Date(travelDate + "T00:00:00").toLocaleDateString("en-US", { month:"long", day:"numeric", year:"numeric" })}. Tailor the itinerary to this specific time of year — mention relevant weather, seasonal events, festivals, or holidays happening around this date, and note if this is peak or off-peak season for booking.`
       : `No specific dates given — include general best-time-to-visit guidance.`;
 
+    const arrivalContext = arrivalAirport
+      ? `CRITICAL: The traveler is flying into ${arrivalAirport}. Build the ENTIRE itinerary around this specific arrival point — routing, day order, and neighborhood/town recommendations must make sense starting from ${arrivalAirport}, not from any other airport or city in the region. Do not default to a different "main" airport or capital city if it doesn't match this arrival point.`
+      : `No arrival airport specified — use the most logical/common entry point for this destination and mention it clearly.`;
+
     const prompt = `You are a luxury travel concierge for affluent couples who value food, walkability, and curated experiences.
 Create a detailed ${tripDays}-day itinerary for ${destination} focused on ${travelStyle}.
 ${dateContext}
+${arrivalContext}
 Format it exactly like this:
 
 **${destination}: [Evocative Trip Title]**
@@ -323,7 +330,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
       const data = await resp.json();
       if (data.text) {
         setStreamText(data.text);
-        saveItinerary(data.text, destination, tripDays, travelStyle, travelDate);
+        saveItinerary(data.text, destination, tripDays, travelStyle, travelDate, arrivalAirport);
       } else {
         setStreamText("Something went wrong. Please try again.");
       }
@@ -722,6 +729,12 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
                   )}
                 </div>
                 <div className="gen-field"><label>Focus</label><input placeholder="food, wine, architecture, hiking..." value={travelStyle} onChange={e => setTravelStyle(e.target.value)} /></div>
+              </div>
+              <div className="gen-row" style={{ marginBottom:0 }}>
+                <div className="gen-field">
+                  <label>Arrival airport / city (optional)</label>
+                  <input placeholder="e.g. Olbia, OLB, or 'flying into Nice'" value={arrivalAirport} onChange={e => setArrivalAirport(e.target.value)} />
+                </div>
               </div>
               <div style={{ marginTop:"1.25rem" }}>
                 <button className="btn-primary" onClick={handleGenerateClick} disabled={generating || !destination}>
