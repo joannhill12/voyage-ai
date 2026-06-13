@@ -191,6 +191,7 @@ export default function App() {
   const [done, setDone]                   = useState(false);
   const [destination, setDestination]     = useState("");
   const [tripDays, setTripDays]           = useState("5");
+  const [travelDate, setTravelDate]       = useState("");
   const [travelStyle, setTravelStyle]     = useState("food and culture");
   const [onboarded, setOnboarded]         = useState(false);
   const [showPaywall, setShowPaywall]     = useState(false);
@@ -232,13 +233,14 @@ export default function App() {
     redirectToCheckout(process.env.REACT_APP_STRIPE_PREMIUM_PRICE_ID);
   }
 
-  function saveItinerary(text, dest, days, style) {
+  function saveItinerary(text, dest, days, style, tDate) {
     const trip = {
       id: Date.now(),
       destination: dest,
       days,
       style,
       text,
+      travelDate: tDate || "",
       date: new Date().toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }),
       title: dest,
     };
@@ -265,8 +267,13 @@ export default function App() {
     setGenerating(true); setStreamText(""); setDone(false);
     setUsageCount(c => c + 1);
 
+    const dateContext = travelDate
+      ? `The traveler plans to visit starting ${new Date(travelDate + "T00:00:00").toLocaleDateString("en-US", { month:"long", day:"numeric", year:"numeric" })}. Tailor the itinerary to this specific time of year — mention relevant weather, seasonal events, festivals, or holidays happening around this date, and note if this is peak or off-peak season for booking.`
+      : `No specific dates given — include general best-time-to-visit guidance.`;
+
     const prompt = `You are a luxury travel concierge for affluent couples who value food, walkability, and curated experiences.
 Create a detailed ${tripDays}-day itinerary for ${destination} focused on ${travelStyle}.
+${dateContext}
 Format it exactly like this:
 
 **${destination}: [Evocative Trip Title]**
@@ -302,7 +309,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
       const data = await resp.json();
       if (data.text) {
         setStreamText(data.text);
-        saveItinerary(data.text, destination, tripDays, travelStyle);
+        saveItinerary(data.text, destination, tripDays, travelStyle, travelDate);
       } else {
         setStreamText("Something went wrong. Please try again.");
       }
@@ -313,11 +320,21 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
   }
 
   // Booking links — uses generic search URLs now, swap in affiliate IDs once approved
-  const BookingLinks = ({ dest }) => {
+  const BookingLinks = ({ dest, checkin, days }) => {
     const q = encodeURIComponent(dest);
+    let hotelUrl = `https://www.booking.com/searchresults.html?ss=${q}`;
+    let flightUrl = `https://www.google.com/travel/flights?q=Flights+to+${q}`;
+    if (checkin) {
+      const inDate = new Date(checkin + "T00:00:00");
+      const outDate = new Date(inDate);
+      outDate.setDate(outDate.getDate() + (parseInt(days, 10) || 5));
+      const fmt = d => d.toISOString().slice(0,10);
+      hotelUrl += `&checkin=${fmt(inDate)}&checkout=${fmt(outDate)}`;
+      flightUrl += `+on+${fmt(inDate)}+through+${fmt(outDate)}`;
+    }
     const links = [
-      { icon: "🏨", label: "Find hotels", url: `https://www.booking.com/searchresults.html?ss=${q}` },
-      { icon: "✈️", label: "Search flights", url: `https://www.google.com/travel/flights?q=Flights+to+${q}` },
+      { icon: "🏨", label: "Find hotels", url: hotelUrl },
+      { icon: "✈️", label: "Search flights", url: flightUrl },
       { icon: "🍽️", label: "Book restaurants", url: `https://www.opentable.com/s?term=${q}` },
       { icon: "🎟️", label: "Find experiences", url: `https://www.viator.com/searchResults/all?text=${q}` },
     ];
@@ -400,7 +417,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
           <button className="modal-close" onClick={() => setViewingTrip(null)}>✕</button>
         </div>
         <div className="itinerary-modal-text">{trip.text}</div>
-        <BookingLinks dest={trip.destination} />
+        <BookingLinks dest={trip.destination} checkin={trip.travelDate} days={trip.days} />
         <div className="itinerary-modal-actions">
           <button className="btn-gold" onClick={() => navigator.clipboard.writeText(trip.text)}>Copy</button>
           {isPremium
@@ -506,6 +523,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
                 <div>
                   <div className="saved-card-dest">{trip.destination}</div>
                   <div className="saved-card-title">{trip.days} days · {trip.style}</div>
+                  {trip.travelDate && <div style={{ fontSize:"0.75rem", color:"var(--gold)", marginTop:"0.2rem", fontWeight:600 }}>✈ {new Date(trip.travelDate + "T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</div>}
                 </div>
                 <span style={{ fontSize:"0.75rem", color:"var(--warm-gray)" }}>{trip.date}</span>
               </div>
@@ -673,7 +691,8 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
                   <select value={tripDays} onChange={e => setTripDays(e.target.value)}>{["3","4","5","6","7","10"].map(d => <option key={d}>{d}</option>)}</select>
                 </div>
               </div>
-              <div className="gen-row" style={{ marginBottom:0 }}>
+              <div className="gen-row">
+                <div className="gen-field"><label>Travel dates (optional)</label><input type="date" value={travelDate} onChange={e => setTravelDate(e.target.value)} /></div>
                 <div className="gen-field"><label>Focus</label><input placeholder="food, wine, architecture, hiking..." value={travelStyle} onChange={e => setTravelStyle(e.target.value)} /></div>
               </div>
               <div style={{ marginTop:"1.25rem" }}>
@@ -687,7 +706,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
                 {generating && <div className="loading-bar"><div className="loading-bar-fill" /></div>}
                 {generating && !streamText && <div style={{ color:"var(--warm-gray)", fontSize:"0.9rem", marginBottom:"1rem" }}>✦ Researching {destination}…</div>}
                 <div ref={streamRef} className="stream-text">{streamText}{generating && <span className="cursor" />}</div>
-                {done && <BookingLinks dest={destination} />}
+                {done && <BookingLinks dest={destination} checkin={travelDate} days={tripDays} />}
                 {done && (
                   <div style={{ marginTop:"2rem", paddingTop:"1.5rem", borderTop:"1px solid var(--sand)", display:"flex", gap:"0.75rem", flexWrap:"wrap" }}>
                     <button className="btn-gold" onClick={() => navigator.clipboard.writeText(streamText)}>Copy</button>
