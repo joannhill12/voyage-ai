@@ -300,11 +300,52 @@ export default function App() {
     return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   }
 
+  function shortDayLabel(dayHeader) {
+    const m = dayHeader.match(/^(Day\s+\d+)/i);
+    return m ? m[1] : dayHeader;
+  }
+
   function formatItineraryHTML(text) {
     const lines = text.split("\n");
+
+    // PASS 1: collect day-by-day glance entries, dining items, activity items
+    const dayGlance = [];
+    const diningItems = [];
+    const activityItems = [];
+    let currentDay = null;
+    for (let raw of lines) {
+      const line = raw.trim();
+      if (line === "") continue;
+      const headerMatch = line.match(/^\*\*(.+?)\*\*\s*(.*)$/);
+      const bulletMatch = line.match(/^[•-]\s*(.+)$/);
+      if (headerMatch) {
+        const headerText = headerMatch[1];
+        const extra = headerMatch[2] || "";
+        if (/^Day\s+\d+/i.test(headerText)) {
+          currentDay = headerText;
+          dayGlance.push(headerText + (extra ? " " + extra : ""));
+        } else {
+          currentDay = null;
+        }
+      } else if (bulletMatch && currentDay) {
+        const item = bulletMatch[1];
+        const dashIdx = item.indexOf(" — ");
+        const lead = dashIdx > -1 ? item.slice(0, dashIdx) : item;
+        const rest = dashIdx > -1 ? item.slice(dashIdx + 3) : "";
+        if (/^(Lunch|Dinner|Brunch|Evening)/i.test(lead)) {
+          diningItems.push({ day: currentDay, lead, rest });
+        } else if (/^(Morning|Afternoon)/i.test(lead)) {
+          activityItems.push({ day: currentDay, lead, rest });
+        }
+      }
+    }
+
+    // PASS 2: main render
     let html = "";
     let inList = false;
     let titleUsed = false;
+    let glanceInserted = false;
+
     for (let raw of lines) {
       const line = raw.trim();
       if (line === "") {
@@ -323,6 +364,12 @@ export default function App() {
           html += `<h1 class="pdf-title">${escapeHtml(headerText)}</h1>`;
           titleUsed = true;
         } else {
+          if (!glanceInserted && dayGlance.length > 0) {
+            html += `<h2 class="pdf-section">✦ Trip at a Glance</h2><ul class="pdf-list pdf-glance-list">`;
+            for (const d of dayGlance) html += `<li>${escapeHtml(d)}</li>`;
+            html += `</ul>`;
+            glanceInserted = true;
+          }
           html += `<h2 class="pdf-section">${escapeHtml(headerText)}${extra ? ` <span class="pdf-section-extra">${escapeHtml(extra)}</span>` : ""}</h2>`;
         }
       } else if (italicMatch) {
@@ -343,6 +390,23 @@ export default function App() {
       }
     }
     if (inList) html += "</ul>";
+
+    // Consolidated reference pages
+    if (diningItems.length > 0) {
+      html += `<h2 class="pdf-section pdf-new-page">🍽️ Restaurants to Book</h2><p class="pdf-section-note">Every dining recommendation from your itinerary, in one place — reserve these ahead of time.</p><ul class="pdf-list pdf-ref-list">`;
+      for (const it of diningItems) {
+        html += `<li><span class="pdf-day-tag">${escapeHtml(shortDayLabel(it.day))}</span> <strong>${escapeHtml(it.lead)}</strong>${it.rest ? " — " + escapeHtml(it.rest) : ""}</li>`;
+      }
+      html += `</ul>`;
+    }
+    if (activityItems.length > 0) {
+      html += `<h2 class="pdf-section pdf-new-page">🎟️ Activities & Experiences to Book</h2><p class="pdf-section-note">Tours, attractions, and experiences worth booking ahead — organized by day.</p><ul class="pdf-list pdf-ref-list">`;
+      for (const it of activityItems) {
+        html += `<li><span class="pdf-day-tag">${escapeHtml(shortDayLabel(it.day))}</span> <strong>${escapeHtml(it.lead)}</strong>${it.rest ? " — " + escapeHtml(it.rest) : ""}</li>`;
+      }
+      html += `</ul>`;
+    }
+
     return html;
   }
 
@@ -394,6 +458,11 @@ export default function App() {
   .pdf-list li { font-size:13px; margin-bottom:8px; line-height:1.65; }
   .pdf-body { font-size:13px; margin: 4px 0 10px 0; }
   .pdf-footer { margin-top:40px; padding-top:14px; border-top:1px solid #e8dfc8; display:flex; justify-content:space-between; font-family:'Helvetica Neue',Arial,sans-serif; font-size:10px; color:#8a8070; letter-spacing:0.08em; text-transform:uppercase; }
+  .pdf-new-page { page-break-before: always; }
+  .pdf-section-note { font-size:11px; color:#8a8070; font-style:italic; margin: -4px 0 12px 0; }
+  .pdf-glance-list li { font-size:13px; font-weight:600; margin-bottom:6px; }
+  .pdf-ref-list li { margin-bottom: 10px; }
+  .pdf-day-tag { display:inline-block; background:#f5f0e8; border:1px solid #e8dfc8; border-radius:4px; padding:1px 7px; font-size:9px; font-weight:700; color:#c9a84c; text-transform:uppercase; letter-spacing:0.06em; margin-right:6px; font-family:'Helvetica Neue',Arial,sans-serif; }
 </style>
 </head>
 <body>
