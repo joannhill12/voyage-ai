@@ -311,7 +311,7 @@ export default function App() {
       }
       const headerMatch = line.match(/^\*\*(.+?)\*\*\s*(.*)$/);
       const italicMatch = line.match(/^\*(.+)\*$/);
-      const bulletMatch = line.match(/^[•\-]\s*(.+)$/);
+      const bulletMatch = line.match(/^[•-]\s*(.+)$/);
 
       if (headerMatch) {
         if (inList) { html += "</ul>"; inList = false; }
