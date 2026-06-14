@@ -257,7 +257,7 @@ export default function App() {
     redirectToCheckout(process.env.REACT_APP_STRIPE_PREMIUM_PRICE_ID);
   }
 
-  function saveItinerary(text, dest, days, style, tDate, arrival) {
+  function saveItinerary(text, dest, days, style, tDate, arrival, departure, tType) {
     const trip = {
       id: Date.now(),
       destination: dest,
@@ -266,6 +266,8 @@ export default function App() {
       text,
       travelDate: tDate || "",
       arrivalAirport: arrival || "",
+      departureAirport: departure || "",
+      tripType: tType || "couples",
       date: new Date().toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }),
       title: dest,
     };
@@ -276,15 +278,130 @@ export default function App() {
     setSavedTrips(prev => prev.filter(t => t.id !== id));
   }
 
+  function escapeHtml(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function formatItineraryHTML(text) {
+    const lines = text.split("\n");
+    let html = "";
+    let inList = false;
+    let titleUsed = false;
+    for (let raw of lines) {
+      const line = raw.trim();
+      if (line === "") {
+        if (inList) { html += "</ul>"; inList = false; }
+        continue;
+      }
+      const headerMatch = line.match(/^\*\*(.+?)\*\*\s*(.*)$/);
+      const italicMatch = line.match(/^\*(.+)\*$/);
+      const bulletMatch = line.match(/^[•-]\s*(.+)$/);
+
+      if (headerMatch) {
+        if (inList) { html += "</ul>"; inList = false; }
+        const headerText = headerMatch[1];
+        const extra = headerMatch[2] || "";
+        if (!titleUsed) {
+          html += `<h1 class="pdf-title">${escapeHtml(headerText)}</h1>`;
+          titleUsed = true;
+        } else {
+          html += `<h2 class="pdf-section">${escapeHtml(headerText)}${extra ? ` <span class="pdf-section-extra">${escapeHtml(extra)}</span>` : ""}</h2>`;
+        }
+      } else if (italicMatch) {
+        html += `<p class="pdf-tagline">${escapeHtml(italicMatch[1])}</p>`;
+      } else if (bulletMatch) {
+        if (!inList) { html += "<ul class='pdf-list'>"; inList = true; }
+        const item = bulletMatch[1];
+        const dashIdx = item.indexOf(" — ");
+        if (dashIdx > -1) {
+          const lead = item.slice(0, dashIdx);
+          const rest = item.slice(dashIdx + 3);
+          html += `<li><strong>${escapeHtml(lead)}</strong> — ${escapeHtml(rest)}</li>`;
+        } else {
+          html += `<li>${escapeHtml(item)}</li>`;
+        }
+      } else {
+        html += `<p class="pdf-body">${escapeHtml(line)}</p>`;
+      }
+    }
+    if (inList) html += "</ul>";
+    return html;
+  }
+
   function downloadPDF(trip) {
-    const content = `PLANWITHVOYAGE ITINERARY\n${"=".repeat(40)}\n${trip.destination} · ${trip.days} days\nGenerated: ${trip.date}\n${"=".repeat(40)}\n\n${trip.text}\n\n${"=".repeat(40)}\nplanwithvoyage.com`;
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${trip.destination.replace(/[^a-z0-9]/gi, "-")}-itinerary.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const bodyHtml = formatItineraryHTML(trip.text);
+    const tripTypeLabels = { couples:"Couples Trip", girls:"Girls' Trip", guys:"Guys' Trip", family:"Family Trip", solo:"Solo Trip" };
+
+    const metaItems = [];
+    metaItems.push(`<div><span class="meta-label">Destination</span><span class="meta-value">${escapeHtml(trip.destination || "")}</span></div>`);
+    if (trip.days) metaItems.push(`<div><span class="meta-label">Duration</span><span class="meta-value">${escapeHtml(String(trip.days))} days</span></div>`);
+    if (trip.travelDate) {
+      const start = new Date(trip.travelDate + "T00:00:00");
+      const end = new Date(start);
+      end.setDate(end.getDate() + (parseInt(trip.days,10) || 0));
+      const fmt = d => d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+      metaItems.push(`<div><span class="meta-label">Travel Dates</span><span class="meta-value">${fmt(start)} – ${fmt(end)}</span></div>`);
+    }
+    if (trip.arrivalAirport) metaItems.push(`<div><span class="meta-label">Arrival</span><span class="meta-value">${escapeHtml(trip.arrivalAirport)}</span></div>`);
+    if (trip.departureAirport) metaItems.push(`<div><span class="meta-label">Departure</span><span class="meta-value">${escapeHtml(trip.departureAirport)}</span></div>`);
+    if (trip.style) metaItems.push(`<div><span class="meta-label">Focus</span><span class="meta-value">${escapeHtml(trip.style)}</span></div>`);
+    if (trip.tripType && tripTypeLabels[trip.tripType]) metaItems.push(`<div><span class="meta-label">Trip Type</span><span class="meta-value">${tripTypeLabels[trip.tripType]}</span></div>`);
+
+    const docHtml = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(trip.destination || "Itinerary")} — PlanWithVoyage</title>
+<style>
+  @page { margin: 0.85in; }
+  * { box-sizing: border-box; }
+  body { font-family: Georgia, 'Times New Roman', serif; color: #0f0e0d; margin:0; padding:0; line-height:1.6; }
+  .pdf-header { display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #c9a84c; padding-bottom: 14px; margin-bottom: 24px; }
+  .pdf-brand { font-family: 'Helvetica Neue', Arial, sans-serif; letter-spacing: 0.18em; font-size: 13px; font-weight:700; color:#0f0e0d; text-transform:uppercase; }
+  .pdf-brand span { color:#c9a84c; }
+  .pdf-tag { font-family:'Helvetica Neue',Arial,sans-serif; font-size:10px; letter-spacing:0.15em; color:#8a8070; text-transform:uppercase; }
+  .pdf-meta { display:flex; flex-wrap:wrap; gap:16px 28px; background:#f5f0e8; border:1px solid #e8dfc8; border-radius:10px; padding:14px 18px; margin-bottom:28px; }
+  .pdf-meta > div { display:flex; flex-direction:column; }
+  .meta-label { font-family:'Helvetica Neue',Arial,sans-serif; font-size:9px; letter-spacing:0.14em; text-transform:uppercase; color:#8a8070; margin-bottom:3px; }
+  .meta-value { font-size:13px; font-weight:600; color:#0f0e0d; }
+  .pdf-title { font-size:28px; font-weight:600; margin: 0 0 6px 0; color:#0f0e0d; }
+  .pdf-tagline { font-style:italic; color:#8a8070; font-size:14px; margin: 0 0 22px 0; }
+  .pdf-section { font-size:16px; font-weight:700; color:#0f0e0d; border-top:1px solid #e8dfc8; padding-top:14px; margin: 26px 0 10px 0; letter-spacing:0.02em; page-break-after: avoid; }
+  .pdf-section-extra { font-size:11px; font-weight:400; color:#c9a84c; text-transform:uppercase; letter-spacing:0.1em; margin-left:8px; }
+  .pdf-list { margin: 0 0 4px 0; padding-left: 22px; }
+  .pdf-list li { font-size:13px; margin-bottom:8px; line-height:1.65; }
+  .pdf-body { font-size:13px; margin: 4px 0 10px 0; }
+  .pdf-footer { margin-top:40px; padding-top:14px; border-top:1px solid #e8dfc8; display:flex; justify-content:space-between; font-family:'Helvetica Neue',Arial,sans-serif; font-size:10px; color:#8a8070; letter-spacing:0.08em; text-transform:uppercase; }
+</style>
+</head>
+<body>
+  <div class="pdf-header">
+    <div class="pdf-brand">PLAN WITH<span>VOYAGE</span></div>
+    <div class="pdf-tag">Travel Itinerary</div>
+  </div>
+  <div class="pdf-meta">
+    ${metaItems.join("\n")}
+  </div>
+  ${bodyHtml}
+  <div class="pdf-footer">
+    <span>planwithvoyage.com</span>
+    <span>Curated by your AI travel concierge</span>
+  </div>
+</body>
+</html>`;
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Please allow popups for planwithvoyage.com to download your PDF.");
+      return;
+    }
+    printWindow.document.open();
+    printWindow.document.write(docHtml);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+    };
   }
 
   async function generateItinerary() {
@@ -403,7 +520,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
       const data = await resp.json();
       if (data.text) {
         setStreamText(data.text);
-        saveItinerary(data.text, saveDestination, saveDays, travelStyle, travelDate, arrivalAirport);
+        saveItinerary(data.text, saveDestination, saveDays, travelStyle, travelDate, arrivalAirport, departureAirport, tripType);
       } else {
         setStreamText("Something went wrong. Please try again.");
       }
@@ -894,7 +1011,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
                   <div style={{ marginTop:"2rem", paddingTop:"1.5rem", borderTop:"1px solid var(--sand)", display:"flex", gap:"0.75rem", flexWrap:"wrap" }}>
                     <button className="btn-gold" onClick={() => navigator.clipboard.writeText(streamText)}>Copy</button>
                     {isPremium
-                      ? <button className="btn-gold" onClick={() => downloadPDF({ text:streamText, destination, days:tripDays, date:new Date().toLocaleDateString() })}>↓ PDF</button>
+                      ? <button className="btn-gold" onClick={() => downloadPDF({ text:streamText, destination: multiMode ? legs.map(l=>l.dest).join(" → ") : destination, days: multiMode ? String(totalMultiDays) : tripDays, date:new Date().toLocaleDateString(), travelDate, arrivalAirport, departureAirport, tripType, style: travelStyle })}>↓ PDF</button>
                       : <button className="btn-ghost" onClick={() => { setPaywallReason("limit"); setShowPaywall(true); }}>↓ PDF (Premium)</button>
                     }
                     <button className="btn-gold" onClick={() => setTab("saved")}>View saved trips →</button>
