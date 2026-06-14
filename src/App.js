@@ -449,10 +449,10 @@ export default function App() {
 
     const tripTypeContexts = {
       couples: "",
-      girls: `This is a GIRLS' TRIP for a group of female friends. Emphasize: boutique spa days and wellness experiences, yoga or fitness classes, wine bars and rooftop cocktail spots, brunch spots with great photo opportunities, boutique shopping, and group-friendly dining (places good for sharing plates and lively conversation). Avoid overly romantic framing — focus on friendship, relaxation, and fun.`,
-      guys: `This is a GUYS' TRIP for a group of male friends. Emphasize: breweries, distilleries, and notable bars; sports viewing spots; golf, fishing, or active/adventure experiences where relevant to the destination; steakhouses and hearty local food; and any iconic "must-do" experiences for a group of friends. Keep the tone fun and high-energy.`,
-      family: `This is a FAMILY TRIP that may include children. Emphasize: family-friendly activities and attractions, restaurants that welcome kids (with note on kid-friendly menu options), pacing that allows for rest/downtime, and practical tips for traveling with children (stroller-friendly areas, nap timing, etc.).`,
-      solo: `This is a SOLO TRAVEL trip. Emphasize: safety-conscious recommendations, social opportunities (group tours, communal dining, social cafes), solo-friendly dining (counter seating, casual spots where dining alone feels natural), and experiences well-suited to a single traveler's pace and flexibility.`,
+      girls: `This is a GIRLS' TRIP for a group of female friends. Emphasize: boutique spa days and wellness experiences, yoga or fitness classes, wine bars and rooftop cocktail spots, brunch spots with great photo opportunities, boutique shopping, and group-friendly dining (places good for sharing plates and lively conversation). Avoid overly romantic framing — focus on friendship, relaxation, and fun. When suggesting packing items, consider things relevant to spa/wellness days, photo-worthy outfits, and group activities.`,
+      guys: `This is a GUYS' TRIP for a group of male friends. Emphasize: breweries, distilleries, and notable bars; sports viewing spots; golf, fishing, or active/adventure experiences where relevant to the destination; steakhouses and hearty local food; and any iconic "must-do" experiences for a group of friends. Keep the tone fun and high-energy. When suggesting packing items, consider gear relevant to any active/adventure plans.`,
+      family: `This is a FAMILY TRIP that may include children. Emphasize: family-friendly activities and attractions, restaurants that welcome kids (with note on kid-friendly menu options), pacing that allows for rest/downtime, and practical tips for traveling with children (stroller-friendly areas, nap timing, etc.). When suggesting packing items, include family/kid-relevant essentials.`,
+      solo: `This is a SOLO TRAVEL trip. Emphasize: safety-conscious recommendations, social opportunities (group tours, communal dining, social cafes), solo-friendly dining (counter seating, casual spots where dining alone feels natural), and experiences well-suited to a single traveler's pace and flexibility. When suggesting packing items, consider solo-travel practicalities (e.g. a doorstop alarm, portable charger for navigating alone).`,
     };
     const tripTypeContext = tripTypeContexts[tripType] || "";
 
@@ -564,7 +564,7 @@ ${streamText}
 
 The traveler has requested this change: "${refineInput.trim()}"
 
-Update the itinerary to incorporate this request. Keep the same overall format and structure (headers with **, bullet points with •, day-by-day breakdown). Make only the changes needed to satisfy the request — keep everything else as similar as possible to the original. Return the FULL updated itinerary in the same format, not just the changed section.`;
+Update the itinerary to incorporate this request. Keep the same overall format and structure (headers with **, bullet points with •, day-by-day breakdown). Make only the changes needed to satisfy the request — keep everything else as similar as possible to the original. If the request is to add a packing list or travel essentials, append a new "**Packing & Travel Essentials**" section at the end with bullet points covering: specific packing items tailored to the destination's season/weather/activities, local currency and card acceptance, plug type & voltage, tipping norms, and any relevant dress code notes. Return the FULL updated itinerary in the same format, not just the changed section.`;
 
     try {
       const resp = await fetch("/api/generate", {
@@ -596,7 +596,7 @@ ${trip.text}
 
 The traveler has requested this change: "${modalRefineInput.trim()}"
 
-Update the itinerary to incorporate this request. Keep the same overall format and structure (headers with **, bullet points with •, day-by-day breakdown). Make only the changes needed to satisfy the request — keep everything else as similar as possible to the original. Return the FULL updated itinerary in the same format, not just the changed section.`;
+Update the itinerary to incorporate this request. Keep the same overall format and structure (headers with **, bullet points with •, day-by-day breakdown). Make only the changes needed to satisfy the request — keep everything else as similar as possible to the original. If the request is to add a packing list or travel essentials, append a new "**Packing & Travel Essentials**" section at the end with bullet points covering: specific packing items tailored to the destination's season/weather/activities, local currency and card acceptance, plug type & voltage, tipping norms, and any relevant dress code notes. Return the FULL updated itinerary in the same format, not just the changed section.`;
 
     try {
       const resp = await fetch("/api/generate", {
@@ -737,7 +737,7 @@ Update the itinerary to incorporate this request. Keep the same overall format a
               <button onClick={() => refineSavedTrip(trip)} disabled={!modalRefineInput.trim() || modalRefining}>✦ Update</button>
             </div>
             <div className="refine-chips">
-              {["Make it more budget-friendly","Add more local/hidden gems","Make the pace more relaxed","Add a day trip option","Make it more romantic"].map(s => (
+              {["Add packing list & travel essentials","Make it more budget-friendly","Add more local/hidden gems","Make the pace more relaxed","Add a day trip option"].map(s => (
                 <button key={s} className="refine-chip" onClick={() => setModalRefineInput(s)}>{s}</button>
               ))}
             </div>
@@ -1144,7 +1144,7 @@ Update the itinerary to incorporate this request. Keep the same overall format a
                       <button onClick={refineItinerary} disabled={!refineInput.trim() || refining}>✦ Update</button>
                     </div>
                     <div className="refine-chips">
-                      {["Make it more budget-friendly","Add more local/hidden gems","Make the pace more relaxed","Add a day trip option","Make it more romantic"].map(s => (
+                      {["Add packing list & travel essentials","Make it more budget-friendly","Add more local/hidden gems","Make the pace more relaxed","Add a day trip option"].map(s => (
                         <button key={s} className="refine-chip" onClick={() => setRefineInput(s)}>{s}</button>
                       ))}
                     </div>
