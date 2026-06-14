@@ -206,6 +206,8 @@ export default function App() {
   const [tripDays, setTripDays]           = useState("5");
   const [travelDate, setTravelDate]       = useState("");
   const [arrivalAirport, setArrivalAirport] = useState("");
+  const [departureAirport, setDepartureAirport] = useState("");
+  const [tripType, setTripType]           = useState("couples");
   const [multiMode, setMultiMode]           = useState(false);
   const [legs, setLegs]                     = useState([{ dest:"", days:"3" }, { dest:"", days:"3" }]);
   const [travelStyle, setTravelStyle]     = useState("food and culture");
@@ -302,17 +304,32 @@ export default function App() {
       ? `CRITICAL: The traveler is flying into ${arrivalAirport}. Build the ENTIRE itinerary around this specific arrival point — routing, day order, and neighborhood/town recommendations must make sense starting from ${arrivalAirport}, not from any other airport or city in the region. Do not default to a different "main" airport or capital city if it doesn't match this arrival point.`
       : `No arrival airport specified — use the most logical/common entry point for this destination and mention it clearly.`;
 
+    const departureContext = departureAirport
+      ? `The traveler will depart for home from ${departureAirport} (which may be different from their arrival airport — this is an "open-jaw" trip). On the final day, route the itinerary so it realistically ends near ${departureAirport}, and mention this in the logistics section.`
+      : "";
+
+    const tripTypeContexts = {
+      couples: "",
+      girls: `This is a GIRLS' TRIP for a group of female friends. Emphasize: boutique spa days and wellness experiences, yoga or fitness classes, wine bars and rooftop cocktail spots, brunch spots with great photo opportunities, boutique shopping, and group-friendly dining (places good for sharing plates and lively conversation). Avoid overly romantic framing — focus on friendship, relaxation, and fun.`,
+      guys: `This is a GUYS' TRIP for a group of male friends. Emphasize: breweries, distilleries, and notable bars; sports viewing spots; golf, fishing, or active/adventure experiences where relevant to the destination; steakhouses and hearty local food; and any iconic "must-do" experiences for a group of friends. Keep the tone fun and high-energy.`,
+      family: `This is a FAMILY TRIP that may include children. Emphasize: family-friendly activities and attractions, restaurants that welcome kids (with note on kid-friendly menu options), pacing that allows for rest/downtime, and practical tips for traveling with children (stroller-friendly areas, nap timing, etc.).`,
+      solo: `This is a SOLO TRAVEL trip. Emphasize: safety-conscious recommendations, social opportunities (group tours, communal dining, social cafes), solo-friendly dining (counter seating, casual spots where dining alone feels natural), and experiences well-suited to a single traveler's pace and flexibility.`,
+    };
+    const tripTypeContext = tripTypeContexts[tripType] || "";
+
     let prompt;
     if (multiMode) {
       const legSummary = legs.map((l,i) => `Leg ${i+1}: ${l.dest} (${l.days} days)`).join("\n");
       const totalDays = legs.reduce((sum,l) => sum + (parseInt(l.days,10)||0), 0);
-      prompt = `You are a luxury travel concierge for affluent couples who value food, walkability, and curated experiences.
+      prompt = `You are a luxury travel concierge who creates curated, specific, insider-quality itineraries focused on food, walkability, and memorable experiences.
 Create a detailed multi-destination itinerary for the following trip (${totalDays} days total) focused on ${travelStyle}:
 
 ${legSummary}
 
 ${dateContext}
 ${arrivalAirport ? arrivalContext : ""}
+${departureContext}
+${tripTypeContext}
 
 For each destination leg, format it exactly like this:
 
@@ -341,10 +358,12 @@ For each destination leg, format it exactly like this:
 
 Be specific — real restaurants, real transport options, real neighborhoods. No generic advice.`;
     } else {
-      prompt = `You are a luxury travel concierge for affluent couples who value food, walkability, and curated experiences.
+      prompt = `You are a luxury travel concierge who creates curated, specific, insider-quality itineraries focused on food, walkability, and memorable experiences.
 Create a detailed ${tripDays}-day itinerary for ${destination} focused on ${travelStyle}.
 ${dateContext}
 ${arrivalContext}
+${departureContext}
+${tripTypeContext}
 Format it exactly like this:
 
 **${destination}: [Evocative Trip Title]**
@@ -766,6 +785,21 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
                 </div>
               </div>
 
+              <div style={{ marginBottom:"1.25rem" }}>
+                <label style={{ display:"block", fontSize:"0.75rem", fontWeight:500, letterSpacing:"0.08em", textTransform:"uppercase", color:"var(--warm-gray)", marginBottom:"0.6rem" }}>Trip type</label>
+                <div className="chip-group">
+                  {[
+                    { id:"couples", label:"💑 Couples" },
+                    { id:"girls", label:"💅 Girls' Trip" },
+                    { id:"guys", label:"🍻 Guys' Trip" },
+                    { id:"family", label:"👨‍👩‍👧 Family" },
+                    { id:"solo", label:"🎒 Solo" },
+                  ].map(t => (
+                    <button key={t.id} className={`chip ${tripType === t.id ? "selected" : ""}`} onClick={() => setTripType(t.id)}>{t.label}</button>
+                  ))}
+                </div>
+              </div>
+
               {multiMode ? (
                 <>
                   {legs.map((leg, i) => (
@@ -801,6 +835,10 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
                       <label>Arrival airport / first city (optional)</label>
                       <input placeholder="e.g. Naples, NAP" value={arrivalAirport} onChange={e => setArrivalAirport(e.target.value)} />
                     </div>
+                    <div className="gen-field">
+                      <label>Departure airport (optional)</label>
+                      <input placeholder="e.g. Madrid, MAD — if different" value={departureAirport} onChange={e => setDepartureAirport(e.target.value)} />
+                    </div>
                   </div>
                 </>
               ) : (
@@ -832,6 +870,10 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
                   <div className="gen-field">
                     <label>Arrival airport / city (optional)</label>
                     <input placeholder="e.g. Olbia, OLB, or 'flying into Nice'" value={arrivalAirport} onChange={e => setArrivalAirport(e.target.value)} />
+                  </div>
+                  <div className="gen-field">
+                    <label>Departure airport (optional)</label>
+                    <input placeholder="e.g. Rome, FCO — if different from arrival" value={departureAirport} onChange={e => setDepartureAirport(e.target.value)} />
                   </div>
                 </div>
                 </>
