@@ -564,7 +564,7 @@ ${streamText}
 
 The traveler has requested this change: "${refineInput.trim()}"
 
-Update the itinerary to incorporate this request. Keep the same overall format and structure (headers with **, bullet points with •, day-by-day breakdown). Make only the changes needed to satisfy the request — keep everything else as similar as possible to the original. If the request is to add a packing list or travel essentials, append a new "**Packing & Travel Essentials**" section at the end with bullet points covering: specific packing items tailored to the destination's season/weather/activities, local currency and card acceptance, plug type & voltage, tipping norms, and any relevant dress code notes. Return the FULL updated itinerary in the same format, not just the changed section.`;
+Update the itinerary to incorporate this request. Keep the same overall format and structure (headers with **, bullet points with •, day-by-day breakdown). Make only the changes needed to satisfy the request — keep everything else as similar as possible to the original. If the request is to add packing list / before-you-go essentials, append a new "**Before You Go**" section at the end with bullet points covering: specific packing items tailored to the destination's season/weather/activities; passport validity reminder (most countries require at least 6 months validity remaining); visa/entry requirements for US travelers to this destination (or note to verify based on citizenship); any relevant health/vaccination considerations; local currency and card acceptance; plug type & voltage and whether a converter (not just adapter) is needed; tipping norms; emergency/local police number; and 2-3 key local phrases (hello, thank you, please) with pronunciation. Return the FULL updated itinerary in the same format, not just the changed section.`;
 
     try {
       const resp = await fetch("/api/generate", {
@@ -596,7 +596,7 @@ ${trip.text}
 
 The traveler has requested this change: "${modalRefineInput.trim()}"
 
-Update the itinerary to incorporate this request. Keep the same overall format and structure (headers with **, bullet points with •, day-by-day breakdown). Make only the changes needed to satisfy the request — keep everything else as similar as possible to the original. If the request is to add a packing list or travel essentials, append a new "**Packing & Travel Essentials**" section at the end with bullet points covering: specific packing items tailored to the destination's season/weather/activities, local currency and card acceptance, plug type & voltage, tipping norms, and any relevant dress code notes. Return the FULL updated itinerary in the same format, not just the changed section.`;
+Update the itinerary to incorporate this request. Keep the same overall format and structure (headers with **, bullet points with •, day-by-day breakdown). Make only the changes needed to satisfy the request — keep everything else as similar as possible to the original. If the request is to add packing list / before-you-go essentials, append a new "**Before You Go**" section at the end with bullet points covering: specific packing items tailored to the destination's season/weather/activities; passport validity reminder (most countries require at least 6 months validity remaining); visa/entry requirements for US travelers to this destination (or note to verify based on citizenship); any relevant health/vaccination considerations; local currency and card acceptance; plug type & voltage and whether a converter (not just adapter) is needed; tipping norms; emergency/local police number; and 2-3 key local phrases (hello, thank you, please) with pronunciation. Return the FULL updated itinerary in the same format, not just the changed section.`;
 
     try {
       const resp = await fetch("/api/generate", {
@@ -737,7 +737,7 @@ Update the itinerary to incorporate this request. Keep the same overall format a
               <button onClick={() => refineSavedTrip(trip)} disabled={!modalRefineInput.trim() || modalRefining}>✦ Update</button>
             </div>
             <div className="refine-chips">
-              {["Add packing list & travel essentials","Make it more budget-friendly","Add more local/hidden gems","Make the pace more relaxed","Add a day trip option"].map(s => (
+              {["Add packing list & before-you-go essentials","Make it more budget-friendly","Add more local/hidden gems","Make the pace more relaxed","Add a day trip option"].map(s => (
                 <button key={s} className="refine-chip" onClick={() => setModalRefineInput(s)}>{s}</button>
               ))}
             </div>
@@ -1144,7 +1144,7 @@ Update the itinerary to incorporate this request. Keep the same overall format a
                       <button onClick={refineItinerary} disabled={!refineInput.trim() || refining}>✦ Update</button>
                     </div>
                     <div className="refine-chips">
-                      {["Add packing list & travel essentials","Make it more budget-friendly","Add more local/hidden gems","Make the pace more relaxed","Add a day trip option"].map(s => (
+                      {["Add packing list & before-you-go essentials","Make it more budget-friendly","Add more local/hidden gems","Make the pace more relaxed","Add a day trip option"].map(s => (
                         <button key={s} className="refine-chip" onClick={() => setRefineInput(s)}>{s}</button>
                       ))}
                     </div>
