@@ -52,7 +52,7 @@ const STYLE = `
   .step-dot.active { background: var(--gold); width: 24px; border-radius: 4px; }
   .step-dot.done { background: var(--ink); }
   .streaming-card { background: var(--white); border: 1px solid rgba(201,168,76,0.2); border-radius: 1.5rem; padding: 2.5rem; max-width: 680px; margin: 0 auto; box-shadow: 0 4px 40px rgba(15,14,13,0.06); }
-  .stream-text { font-size: 0.95rem; line-height: 1.8; color: var(--ink); white-space: pre-wrap; min-height: 200px; max-height: 600px; overflow-y: auto; }
+  .stream-text { font-size: 0.95rem; line-height: 1.8; color: var(--ink); white-space: pre-wrap; min-height: 200px; }
   .cursor { display: inline-block; width: 2px; height: 1em; background: var(--gold); margin-left: 2px; animation: blink 0.8s steps(1) infinite; vertical-align: middle; }
   @keyframes blink { 50% { opacity: 0; } }
   .loading-bar { height: 2px; background: var(--sand); border-radius: 1px; overflow: hidden; margin-bottom: 1.5rem; }
