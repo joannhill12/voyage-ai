@@ -156,6 +156,18 @@ const STYLE = `
   .booking-link:hover { border-color: var(--gold); background: var(--white); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(201,168,76,0.15); }
   .booking-link-icon { font-size: 1.1rem; }
   .booking-disclaimer { font-size: 0.7rem; color: var(--warm-gray); margin-top: 0.75rem; font-style: italic; }
+  .refine-section { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--sand); }
+  .refine-title { font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-bottom: 0.5rem; }
+  .refine-hint { font-size: 0.8rem; color: var(--warm-gray); margin-bottom: 0.75rem; line-height: 1.5; }
+  .refine-row { display: flex; gap: 0.6rem; }
+  .refine-row input { flex: 1; padding: 0.7rem 1rem; border: 1px solid var(--sand); border-radius: 0.65rem; background: var(--cream); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; color: var(--ink); outline: none; transition: border-color 0.2s; }
+  .refine-row input:focus { border-color: var(--gold); }
+  .refine-row button { padding: 0.7rem 1.4rem; border-radius: 0.65rem; border: none; background: var(--ink); color: var(--cream); font-size: 0.85rem; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+  .refine-row button:hover:not(:disabled) { background: #2a2520; }
+  .refine-row button:disabled { background: var(--sand); color: var(--warm-gray); cursor: not-allowed; }
+  .refine-chips { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.6rem; }
+  .refine-chip { font-size: 0.75rem; padding: 0.3rem 0.75rem; border-radius: 1rem; border: 1px solid var(--sand); background: transparent; color: var(--warm-gray); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: all 0.2s; }
+  .refine-chip:hover { border-color: var(--gold); color: var(--gold); }
   @media(max-width:600px){ .nav{padding:1rem 1.25rem} .card,.streaming-card,.gen-card{padding:1.5rem;border-radius:1.25rem} .hero{padding:3rem 1.25rem 2rem} .modal{padding:2rem 1.5rem;border-radius:1.5rem} .itinerary-modal-content{padding:1.5rem} }
 `;
 
@@ -216,6 +228,9 @@ export default function App() {
   const [paywallReason, setPaywallReason] = useState("limit");
   const [savedTrips, setSavedTrips]       = useState(loadSaved);
   const [viewingTrip, setViewingTrip]     = useState(null);
+  const [refineInput, setRefineInput]     = useState("");
+  const [refining, setRefining]           = useState(false);
+  const [savedTripId, setSavedTripId]     = useState(null);
   const streamRef = useRef(null);
 
   const styleOptions = ["Food-Focused","Cultural","Adventure","Walkable Cities","Hidden Gems","Romantic","Art & Design","Nature","Beach","Active"];
@@ -272,6 +287,7 @@ export default function App() {
       title: dest,
     };
     setSavedTrips(prev => [trip, ...prev]);
+    return trip.id;
   }
 
   function deleteTrip(id) {
@@ -295,7 +311,7 @@ export default function App() {
       }
       const headerMatch = line.match(/^\*\*(.+?)\*\*\s*(.*)$/);
       const italicMatch = line.match(/^\*(.+)\*$/);
-      const bulletMatch = line.match(/^[•-]\s*(.+)$/);
+      const bulletMatch = line.match(/^[•\-]\s*(.+)$/);
 
       if (headerMatch) {
         if (inList) { html += "</ul>"; inList = false; }
@@ -329,6 +345,10 @@ export default function App() {
   }
 
   function downloadPDF(trip) {
+    if (!trip || !trip.text) {
+      alert("This itinerary couldn't be loaded for PDF export. Please try generating it again.");
+      return;
+    }
     const bodyHtml = formatItineraryHTML(trip.text);
     const tripTypeLabels = { couples:"Couples Trip", girls:"Girls' Trip", guys:"Guys' Trip", family:"Family Trip", solo:"Solo Trip" };
 
@@ -520,7 +540,9 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
       const data = await resp.json();
       if (data.text) {
         setStreamText(data.text);
-        saveItinerary(data.text, saveDestination, saveDays, travelStyle, travelDate, arrivalAirport, departureAirport, tripType);
+        const newId = saveItinerary(data.text, saveDestination, saveDays, travelStyle, travelDate, arrivalAirport, departureAirport, tripType);
+        setSavedTripId(newId);
+        setRefineInput("");
       } else {
         setStreamText("Something went wrong. Please try again.");
       }
@@ -528,6 +550,38 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
       setStreamText("Unable to reach the AI. Please try again.");
     }
     setGenerating(false); setDone(true);
+  }
+
+  async function refineItinerary() {
+    if (!refineInput.trim() || !streamText) return;
+    setRefining(true);
+
+    const prompt = `Here is an existing travel itinerary:
+
+${streamText}
+
+The traveler has requested this change: "${refineInput.trim()}"
+
+Update the itinerary to incorporate this request. Keep the same overall format and structure (headers with **, bullet points with •, day-by-day breakdown). Make only the changes needed to satisfy the request — keep everything else as similar as possible to the original. Return the FULL updated itinerary in the same format, not just the changed section.`;
+
+    try {
+      const resp = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      });
+      const data = await resp.json();
+      if (data.text) {
+        setStreamText(data.text);
+        if (savedTripId) {
+          setSavedTrips(prev => prev.map(t => t.id === savedTripId ? { ...t, text: data.text } : t));
+        }
+        setRefineInput("");
+      }
+    } catch {
+      // keep existing itinerary if refinement fails
+    }
+    setRefining(false);
   }
 
   // Booking links — uses generic search URLs now, swap in affiliate IDs once approved
@@ -1015,8 +1069,34 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
                       : <button className="btn-ghost" onClick={() => { setPaywallReason("limit"); setShowPaywall(true); }}>↓ PDF (Premium)</button>
                     }
                     <button className="btn-gold" onClick={() => setTab("saved")}>View saved trips →</button>
-                    <button className="btn-gold" onClick={() => { setStreamText(""); setDone(false); }}>Generate another</button>
+                    <button className="btn-gold" onClick={() => { setStreamText(""); setDone(false); setSavedTripId(null); setRefineInput(""); }}>Generate another</button>
                     <button className="btn-ghost" onClick={() => setTab("dashboard")}>← Back</button>
+                  </div>
+                )}
+                {done && !refining && (
+                  <div className="refine-section">
+                    <div className="refine-title">✦ Refine This Itinerary</div>
+                    <div className="refine-hint">Want any changes? Tell us what to adjust and we'll update the itinerary above.</div>
+                    <div className="refine-row">
+                      <input
+                        placeholder="e.g. 'swap day 2 dinner for something casual' or 'add a day trip to Versailles'"
+                        value={refineInput}
+                        onChange={e => setRefineInput(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter" && !refining) refineItinerary(); }}
+                      />
+                      <button onClick={refineItinerary} disabled={!refineInput.trim() || refining}>✦ Update</button>
+                    </div>
+                    <div className="refine-chips">
+                      {["Make it more budget-friendly","Add more local/hidden gems","Make the pace more relaxed","Add a day trip option","Make it more romantic"].map(s => (
+                        <button key={s} className="refine-chip" onClick={() => setRefineInput(s)}>{s}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {refining && (
+                  <div className="refine-section">
+                    <div className="loading-bar"><div className="loading-bar-fill" /></div>
+                    <div style={{ color:"var(--warm-gray)", fontSize:"0.9rem", marginTop:"0.75rem" }}>✦ Updating your itinerary…</div>
                   </div>
                 )}
               </div>
