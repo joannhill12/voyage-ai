@@ -231,6 +231,8 @@ export default function App() {
   const [refineInput, setRefineInput]     = useState("");
   const [refining, setRefining]           = useState(false);
   const [savedTripId, setSavedTripId]     = useState(null);
+  const [modalRefineInput, setModalRefineInput] = useState("");
+  const [modalRefining, setModalRefining] = useState(false);
   const streamRef = useRef(null);
 
   const styleOptions = ["Food-Focused","Cultural","Adventure","Walkable Cities","Hidden Gems","Romantic","Art & Design","Nature","Beach","Active"];
@@ -584,6 +586,36 @@ Update the itinerary to incorporate this request. Keep the same overall format a
     setRefining(false);
   }
 
+  async function refineSavedTrip(trip) {
+    if (!modalRefineInput.trim()) return;
+    setModalRefining(true);
+
+    const prompt = `Here is an existing travel itinerary:
+
+${trip.text}
+
+The traveler has requested this change: "${modalRefineInput.trim()}"
+
+Update the itinerary to incorporate this request. Keep the same overall format and structure (headers with **, bullet points with •, day-by-day breakdown). Make only the changes needed to satisfy the request — keep everything else as similar as possible to the original. Return the FULL updated itinerary in the same format, not just the changed section.`;
+
+    try {
+      const resp = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      });
+      const data = await resp.json();
+      if (data.text) {
+        setSavedTrips(prev => prev.map(t => t.id === trip.id ? { ...t, text: data.text } : t));
+        setViewingTrip(prev => prev ? { ...prev, text: data.text } : prev);
+        setModalRefineInput("");
+      }
+    } catch {
+      // keep existing itinerary if refinement fails
+    }
+    setModalRefining(false);
+  }
+
   // Booking links — uses generic search URLs now, swap in affiliate IDs once approved
   const BookingLinks = ({ dest, checkin, days }) => {
     const q = encodeURIComponent(dest);
@@ -691,6 +723,31 @@ Update the itinerary to incorporate this request. Keep the same overall format a
           }
           <button className="btn-ghost" onClick={() => setViewingTrip(null)}>Close</button>
         </div>
+        {!modalRefining ? (
+          <div className="refine-section">
+            <div className="refine-title">✦ Refine This Itinerary</div>
+            <div className="refine-hint">Want any changes? Tell us what to adjust and we'll update this saved trip.</div>
+            <div className="refine-row">
+              <input
+                placeholder="e.g. 'swap day 2 dinner for something casual' or 'add a day trip'"
+                value={modalRefineInput}
+                onChange={e => setModalRefineInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && !modalRefining) refineSavedTrip(trip); }}
+              />
+              <button onClick={() => refineSavedTrip(trip)} disabled={!modalRefineInput.trim() || modalRefining}>✦ Update</button>
+            </div>
+            <div className="refine-chips">
+              {["Make it more budget-friendly","Add more local/hidden gems","Make the pace more relaxed","Add a day trip option","Make it more romantic"].map(s => (
+                <button key={s} className="refine-chip" onClick={() => setModalRefineInput(s)}>{s}</button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="refine-section">
+            <div className="loading-bar"><div className="loading-bar-fill" /></div>
+            <div style={{ color:"var(--warm-gray)", fontSize:"0.9rem", marginTop:"0.75rem" }}>✦ Updating your itinerary…</div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -794,7 +851,7 @@ Update the itinerary to incorporate this request. Keep the same overall format a
               </div>
               <div className="saved-card-preview">{trip.text}</div>
               <div className="saved-card-actions">
-                <button className="btn-gold" style={{ padding:"0.4rem 0.9rem", fontSize:"0.8rem" }} onClick={() => setViewingTrip(trip)}>View</button>
+                <button className="btn-gold" style={{ padding:"0.4rem 0.9rem", fontSize:"0.8rem" }} onClick={() => { setModalRefineInput(""); setViewingTrip(trip); }}>View</button>
                 <button className="btn-gold" style={{ padding:"0.4rem 0.9rem", fontSize:"0.8rem" }} onClick={() => navigator.clipboard.writeText(trip.text)}>Copy</button>
                 {isPremium
                   ? <button className="btn-gold" style={{ padding:"0.4rem 0.9rem", fontSize:"0.8rem" }} onClick={() => downloadPDF(trip)}>↓ PDF</button>
