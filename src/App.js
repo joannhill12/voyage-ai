@@ -185,6 +185,7 @@ const SAMPLE_TRIPS = [
 const BASIC_LIMIT = 3;
 const STORAGE_KEY = "pwv_saved_itineraries";
 const PROFILE_KEY = "pwv_profile";
+const FREE_USED_KEY = "pwv_free_used";
 
 function loadSaved() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
@@ -206,6 +207,7 @@ const DEFAULT_PROFILE = { name:"", airport:"", budget:"2000-5000", styles:[], tr
 
 export default function App() {
   const savedProfile = loadProfile();
+  const freeAlreadyUsed = (() => { try { return !!localStorage.getItem(FREE_USED_KEY); } catch { return false; } })();
   const [tab, setTab]                     = useState(savedProfile ? "dashboard" : "onboard");
   const [step, setStep]                   = useState(0);
   const [profile, setProfile]             = useState(savedProfile || DEFAULT_PROFILE);
@@ -233,6 +235,8 @@ export default function App() {
   const [savedTripId, setSavedTripId]     = useState(null);
   const [modalRefineInput, setModalRefineInput] = useState("");
   const [modalRefining, setModalRefining] = useState(false);
+  const [freeMode, setFreeMode]           = useState(false);
+  const [freeUsed, setFreeUsed]           = useState(freeAlreadyUsed);
   const streamRef = useRef(null);
 
   const styleOptions = ["Food-Focused","Cultural","Adventure","Walkable Cities","Hidden Gems","Romantic","Art & Design","Nature","Beach","Active"];
@@ -268,6 +272,61 @@ export default function App() {
   function handleGenerateClick() {
     if (atLimit) { setPaywallReason("limit"); setShowPaywall(true); return; }
     generateItinerary();
+  }
+
+  async function handleFreeGenerate() {
+    if (!destination || freeUsed) return;
+    setGenerating(true); setStreamText(""); setDone(false);
+
+    const prompt = `You are a luxury travel concierge who creates curated, specific, insider-quality itineraries focused on food, walkability, and memorable experiences.
+Create a detailed ${tripDays}-day itinerary for ${destination} focused on ${travelStyle}.
+No specific dates given — include general best-time-to-visit guidance.
+No arrival airport specified — use the most logical/common entry point for this destination and mention it clearly.
+
+Format it exactly like this:
+
+**${destination}: [Evocative Trip Title]**
+*[One compelling sentence that sells this trip]*
+
+**Trip Overview**
+[2-3 sentences: why this destination, why now, what makes this itinerary special]
+
+**Day 1 — [Day Theme]**
+• Morning (9:00 AM): [Activity] — [1-2 sentence description with insider tip]
+• Lunch (12:30 PM): [Restaurant name] — [what to order, why it's special]
+• Afternoon (2:30 PM): [Activity] — [description]
+• Evening (7:00 PM): [Dinner restaurant] — [description, reservation notes]
+
+[Continue for all ${tripDays} days in same format]
+
+**Insider Tips**
+• [3 specific, non-obvious tips]
+
+**Logistics**
+• Best time to visit: [advice]
+• Neighborhood to stay: [specific area and why]
+• Budget estimate: [per-person for ${tripDays} days excluding flights]
+
+Be specific — real restaurants, real neighborhoods, real experiences. No generic advice.`;
+
+    try {
+      const resp = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      });
+      const data = await resp.json();
+      if (data.text) {
+        setStreamText(data.text);
+        try { localStorage.setItem(FREE_USED_KEY, "1"); } catch {}
+        setFreeUsed(true);
+      } else {
+        setStreamText("Something went wrong. Please try again.");
+      }
+    } catch {
+      setStreamText("Unable to reach the AI. Please try again.");
+    }
+    setGenerating(false); setDone(true);
   }
 
   function upgradeToPremium() {
@@ -1008,15 +1067,71 @@ Update the itinerary to incorporate this request. Keep the same overall format a
           </div>
         </nav>
 
-        {!onboarded && (
+        {!onboarded && !freeMode && (
           <div>
             <div className="hero">
               <div className="hero-eyebrow">✦ Your AI Travel Concierge</div>
               <h1>Travel more.<br /><em>Plan less.</em></h1>
               <p>PlanWithVoyage automatically delivers curated, ready-to-book itineraries tailored to you — no research required.</p>
+              {!freeUsed && (
+                <div style={{ display:"flex", gap:"1rem", justifyContent:"center", flexWrap:"wrap", marginBottom:"1rem" }}>
+                  <button className="btn-primary" style={{ width:"auto", padding:"0.85rem 2rem" }} onClick={() => { setFreeMode(true); setStreamText(""); setDone(false); }}>✦ Try free — no signup</button>
+                  <button className="btn-ghost" onClick={() => {}}>Create account →</button>
+                </div>
+              )}
+              {freeUsed && (
+                <div style={{ background:"var(--white)", border:"1px solid var(--sand)", borderRadius:"1rem", padding:"1.25rem", marginBottom:"1rem", maxWidth:400, margin:"0 auto 1rem" }}>
+                  <p style={{ fontSize:"0.9rem", color:"var(--warm-gray)", marginBottom:"0.75rem" }}>You've used your free itinerary! Create an account to generate more.</p>
+                  <button className="btn-primary" onClick={() => {}}>Create account →</button>
+                </div>
+              )}
             </div>
             <div className="steps">{[0,1,2,3].map(i => (<div key={i} className={`step-dot ${i === step ? "active" : i < step ? "done" : ""}`} />))}</div>
             <div className="card">{onboardSteps[step]}</div>
+          </div>
+        )}
+
+        {!onboarded && freeMode && (
+          <div style={{ paddingTop:"2.5rem", paddingBottom:"3rem" }}>
+            <div className="hero" style={{ paddingBottom:"1.5rem" }}>
+              <div className="hero-eyebrow">✦ Free itinerary — no signup needed</div>
+              <h1 style={{ fontSize:"clamp(2rem,4vw,3rem)" }}>Where do you<br /><em>want to go?</em></h1>
+              <p>Generate one complete AI itinerary, on us. No credit card required.</p>
+            </div>
+            <div className="gen-card">
+              <div className="gen-row">
+                <div className="gen-field"><label>Destination</label><input placeholder="e.g. Lisbon, Portugal" value={destination} onChange={e => setDestination(e.target.value)} /></div>
+                <div className="gen-field" style={{ maxWidth:120 }}><label>Days</label>
+                  <select value={tripDays} onChange={e => setTripDays(e.target.value)}>{["3","4","5","6","7","8","9","10"].map(d => <option key={d}>{d}</option>)}</select>
+                </div>
+              </div>
+              <div className="gen-row" style={{ marginBottom:0 }}>
+                <div className="gen-field"><label>Focus</label><input placeholder="food, wine, culture, adventure..." value={travelStyle} onChange={e => setTravelStyle(e.target.value)} /></div>
+              </div>
+              <div style={{ marginTop:"1.25rem" }}>
+                <button className="btn-primary" onClick={handleFreeGenerate} disabled={generating || !destination || freeUsed}>
+                  {generating ? "Crafting your itinerary…" : freeUsed ? "Free itinerary used — create an account for more" : "✦ Generate my free itinerary"}
+                </button>
+              </div>
+            </div>
+            {(generating || streamText) && (
+              <div className="streaming-card">
+                {generating && <div className="loading-bar"><div className="loading-bar-fill" /></div>}
+                {generating && !streamText && <div style={{ color:"var(--warm-gray)", fontSize:"0.9rem", marginBottom:"1rem" }}>✦ Crafting your {destination} itinerary…</div>}
+                <div ref={streamRef} className="stream-text">{streamText}{generating && <span className="cursor" />}</div>
+                {done && (
+                  <div style={{ marginTop:"2rem", padding:"1.5rem", background:"linear-gradient(135deg, var(--ink), #2a2520)", borderRadius:"1.25rem", textAlign:"center" }}>
+                    <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1.5rem", fontWeight:600, color:"var(--cream)", marginBottom:"0.5rem" }}>Love your itinerary?</div>
+                    <p style={{ color:"rgba(245,240,232,0.7)", fontSize:"0.9rem", marginBottom:"1.25rem", lineHeight:1.6 }}>Save it, refine it, generate unlimited trips, and export a beautiful PDF travel brief — starting at $29/month.</p>
+                    <div style={{ display:"flex", gap:"0.75rem", justifyContent:"center", flexWrap:"wrap" }}>
+                      <button className="btn-p gold-grad" style={{ padding:"0.85rem 2rem" }} onClick={() => { setFreeMode(false); setStreamText(""); setDone(false); }}>Create account — save this trip</button>
+                      <button className="btn-ghost" style={{ color:"var(--cream)", borderColor:"rgba(245,240,232,0.3)" }} onClick={() => navigator.clipboard.writeText(streamText)}>Copy itinerary</button>
+                    </div>
+                    <p style={{ color:"rgba(245,240,232,0.4)", fontSize:"0.75rem", marginTop:"0.75rem" }}>7-day money-back guarantee · Cancel anytime</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
