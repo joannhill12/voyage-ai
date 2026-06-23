@@ -1102,7 +1102,7 @@ Update the itinerary to incorporate this request. Keep the same overall format a
               <div className="gen-row">
                 <div className="gen-field"><label>Destination</label><input placeholder="e.g. Lisbon, Portugal" value={destination} onChange={e => setDestination(e.target.value)} /></div>
                 <div className="gen-field" style={{ maxWidth:120 }}><label>Days</label>
-                  <select value={tripDays} onChange={e => setTripDays(e.target.value)}>{["3","4","5","6","7","8","9","10"].map(d => <option key={d}>{d}</option>)}</select>
+                  <select value={tripDays} onChange={e => setTripDays(e.target.value)}>{["2","3","4","5","6","7","8","9","10"].map(d => <option key={d}>{d}</option>)}</select>
                 </div>
               </div>
               <div className="gen-row" style={{ marginBottom:0 }}>
@@ -1258,7 +1258,7 @@ Update the itinerary to incorporate this request. Keep the same overall format a
                 <div className="gen-row">
                   <div className="gen-field"><label>Destination</label><input placeholder="e.g. Lisbon, Portugal" value={destination} onChange={e => setDestination(e.target.value)} /></div>
                   <div className="gen-field" style={{ maxWidth:120 }}><label>Days</label>
-                    <select value={tripDays} onChange={e => setTripDays(e.target.value)}>{["3","4","5","6","7","8","9","10","11","12","13","14","21","28"].map(d => <option key={d}>{d}</option>)}</select>
+                    <select value={tripDays} onChange={e => setTripDays(e.target.value)}>{["2","3","4","5","6","7","8","9","10","11","12","13","14","21","28"].map(d => <option key={d}>{d}</option>)}</select>
                   </div>
                 </div>
                 <div className="gen-row">
