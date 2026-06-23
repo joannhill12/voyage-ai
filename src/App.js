@@ -535,7 +535,7 @@ Be specific — real restaurants, real neighborhoods, real experiences. No gener
   ${bodyHtml}
   <div class="pdf-footer">
     <span>planwithvoyage.com</span>
-    <span>Curated by your AI travel concierge</span>
+    <span>Created by JoAnn Hill · joannhilltravel.com</span>
   </div>
 </body>
 </html>`;
@@ -1347,6 +1347,21 @@ Update the itinerary to incorporate this request. Keep the same overall format a
 
         {onboarded && tab === "saved" && <SavedTripsPage />}
         {onboarded && tab === "pricing" && <PricingPage />}
+
+        {onboarded && (
+          <footer style={{ borderTop:"1px solid rgba(201,168,76,0.15)", padding:"2rem 2rem 1.5rem", textAlign:"center", marginTop:"2rem" }}>
+            <div style={{ fontFamily:"'Cormorant Garamond',serif", fontSize:"1rem", color:"var(--warm-gray)", marginBottom:"0.5rem" }}>
+              <span style={{ color:"var(--gold)" }}>✦</span> PlanWithVoyage is created by{" "}
+              <a href="https://www.joannhilltravel.com" target="_blank" rel="noopener noreferrer" style={{ color:"var(--ink)", fontWeight:600, textDecoration:"none", borderBottom:"1px solid var(--gold)" }}>JoAnn Hill</a>
+              {" "}— travel author, educator & founder
+            </div>
+            <div style={{ fontSize:"0.75rem", color:"var(--warm-gray)", letterSpacing:"0.08em", marginTop:"0.4rem" }}>
+              <a href="https://www.joannhilltravel.com" target="_blank" rel="noopener noreferrer" style={{ color:"var(--warm-gray)", textDecoration:"none" }}>joannhilltravel.com</a>
+              {" · "}
+              <a href="https://www.planwithvoyage.com" style={{ color:"var(--warm-gray)", textDecoration:"none" }}>planwithvoyage.com</a>
+            </div>
+          </footer>
+        )}
       </div>
     </>
   );
